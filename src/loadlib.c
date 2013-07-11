@@ -1,7 +1,7 @@
 /*
 ** $Id: loadlib.c,v 1.111 2012/05/30 12:33:44 roberto Exp $
 ** Dynamic library loader for Lua
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 **
 ** This module contains an implementation of loadlib for Unix systems
 ** that have dlfcn, an implementation for Windows, and a stub for other
@@ -24,7 +24,7 @@
 #define loadlib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
@@ -42,7 +42,7 @@
 #define LUA_CPATH	"LUA_CPATH"
 #endif
 
-#define LUA_PATHSUFFIX		"_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+#define LUA_PATHSUFFIX		"_" GOLIGHTLY_VERSION_MAJOR "_" GOLIGHTLY_VERSION_MINOR
 
 #define LUA_PATHVERSION		LUA_PATH LUA_PATHSUFFIX
 #define LUA_CPATHVERSION	LUA_CPATH LUA_PATHSUFFIX
@@ -114,7 +114,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
 
 
 
-#if defined(LUA_USE_DLOPEN)
+#if defined(USE_DLOPEN)
 /*
 ** {========================================================================
 ** This is an implementation of loadlib based on the dlfcn interface.

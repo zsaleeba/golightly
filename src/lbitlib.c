@@ -1,13 +1,13 @@
 /*
 ** $Id: lbitlib.c,v 1.18 2013/03/19 13:19:12 roberto Exp $
 ** Standard library for bitwise operations
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #define lbitlib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"

@@ -1,7 +1,7 @@
 /*
 ** $Id: lauxlib.h,v 1.120 2011/11/29 15:55:08 roberto Exp $
 ** Auxiliary functions for building Lua libraries
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "lua.h"
+#include "golightly.h"
 
 
 
@@ -27,7 +27,7 @@ typedef struct luaL_Reg {
 
 
 LUALIB_API void (luaL_checkversion_) (lua_State *L, lua_Number ver);
-#define luaL_checkversion(L)	luaL_checkversion_(L, LUA_VERSION_NUM)
+#define luaL_checkversion(L)	luaL_checkversion_(L, GOLIGHTLY_VERSION_NUM)
 
 LUALIB_API int (luaL_getmetafield) (lua_State *L, int obj, const char *e);
 LUALIB_API int (luaL_callmeta) (lua_State *L, int obj, const char *e);

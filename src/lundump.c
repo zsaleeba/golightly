@@ -1,7 +1,7 @@
 /*
 ** $Id: lundump.c,v 2.22 2012/05/08 13:53:33 roberto Exp $
 ** load precompiled Lua chunks
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #include <string.h>
@@ -9,7 +9,7 @@
 #define lundump_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "ldebug.h"
 #include "ldo.h"
@@ -183,7 +183,7 @@ static void LoadFunction(LoadState* S, Proto* f)
 
 /* the code below must be consistent with the code in luaU_header */
 #define N0	LUAC_HEADERSIZE
-#define N1	(sizeof(LUA_SIGNATURE)-sizeof(char))
+#define N1	(sizeof(GOLIGHTLY_SIGNATURE)-sizeof(char))
 #define N2	N1+2
 #define N3	N2+6
 
@@ -209,7 +209,7 @@ Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
  Closure* cl;
  if (*name=='@' || *name=='=')
   S.name=name+1;
- else if (*name==LUA_SIGNATURE[0])
+ else if (*name==GOLIGHTLY_SIGNATURE[0])
   S.name="binary string";
  else
   S.name=name;
@@ -233,7 +233,7 @@ Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
 }
 
 #define MYINT(s)	(s[0]-'0')
-#define VERSION		MYINT(LUA_VERSION_MAJOR)*16+MYINT(LUA_VERSION_MINOR)
+#define VERSION		MYINT(GOLIGHTLY_VERSION_MAJOR)*16+MYINT(GOLIGHTLY_VERSION_MINOR)
 #define FORMAT		0		/* this is the official format */
 
 /*
@@ -244,8 +244,8 @@ Closure* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
 void luaU_header (lu_byte* h)
 {
  int x=1;
- memcpy(h,LUA_SIGNATURE,sizeof(LUA_SIGNATURE)-sizeof(char));
- h+=sizeof(LUA_SIGNATURE)-sizeof(char);
+ memcpy(h,GOLIGHTLY_SIGNATURE,sizeof(GOLIGHTLY_SIGNATURE)-sizeof(char));
+ h+=sizeof(GOLIGHTLY_SIGNATURE)-sizeof(char);
  *h++=cast_byte(VERSION);
  *h++=cast_byte(FORMAT);
  *h++=cast_byte(*(char*)&x);			/* endianness */

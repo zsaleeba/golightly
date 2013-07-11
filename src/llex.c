@@ -1,7 +1,7 @@
 /*
 ** $Id: llex.c,v 2.63 2013/03/16 21:10:18 roberto Exp $
 ** Lexical Analyzer
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -11,7 +11,7 @@
 #define llex_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lctype.h"
 #include "ldo.h"

@@ -1,7 +1,7 @@
 /*
 ** $Id: ldo.c,v 2.108 2012/10/01 14:05:04 roberto Exp $
 ** Stack and Call structure of Lua
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -12,7 +12,7 @@
 #define ldo_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lapi.h"
 #include "ldebug.h"
@@ -48,14 +48,14 @@
 */
 #if !defined(LUAI_THROW)
 
-#if defined(__cplusplus) && !defined(LUA_USE_LONGJMP)
+#if defined(__cplusplus) && !defined(USE_LONGJMP)
 /* C++ exceptions */
 #define LUAI_THROW(L,c)		throw(c)
 #define LUAI_TRY(L,c,a) \
 	try { a } catch(...) { if ((c)->status == 0) (c)->status = -1; }
 #define luai_jmpbuf		int  /* dummy variable */
 
-#elif defined(LUA_USE_ULONGJMP)
+#elif defined(USE_ULONGJMP)
 /* in Unix, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)		_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)		if (_setjmp((c)->b) == 0) { a }
@@ -634,7 +634,7 @@ static void f_parser (lua_State *L, void *ud) {
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
-  if (c == LUA_SIGNATURE[0]) {
+  if (c == GOLIGHTLY_SIGNATURE[0]) {
     checkmode(L, p->mode, "binary");
     cl = luaU_undump(L, p->z, &p->buff, p->name);
   }

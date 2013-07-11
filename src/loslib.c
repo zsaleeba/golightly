@@ -1,7 +1,7 @@
 /*
 ** $Id: loslib.c,v 1.40 2012/10/19 15:54:02 roberto Exp $
 ** Standard Operating System library
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -14,7 +14,7 @@
 #define loslib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
@@ -25,7 +25,7 @@
 */
 #if !defined(LUA_STRFTIMEOPTIONS)
 
-#if !defined(LUA_USE_POSIX)
+#if !defined(USE_POSIX)
 #define LUA_STRFTIMEOPTIONS	{ "aAbBcdHIjmMpSUwWxXyYz%", "" }
 #else
 #define LUA_STRFTIMEOPTIONS \
@@ -42,7 +42,7 @@
 ** By default, Lua uses tmpnam except when POSIX is available, where it
 ** uses mkstemp.
 */
-#if defined(LUA_USE_MKSTEMP)
+#if defined(USE_MKSTEMP)
 #include <unistd.h>
 #define LUA_TMPNAMBUFSIZE	32
 #define lua_tmpnam(b,e) { \
@@ -63,7 +63,7 @@
 ** By default, Lua uses gmtime/localtime, except when POSIX is available,
 ** where it uses gmtime_r/localtime_r
 */
-#if defined(LUA_USE_GMTIME_R)
+#if defined(USE_GMTIME_R)
 
 #define l_gmtime(t,r)		gmtime_r(t,r)
 #define l_localtime(t,r)	localtime_r(t,r)

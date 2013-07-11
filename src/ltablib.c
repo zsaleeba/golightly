@@ -1,7 +1,7 @@
 /*
 ** $Id: ltablib.c,v 1.65 2013/03/07 18:17:24 roberto Exp $
 ** Library for Table Manipulation
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -10,7 +10,7 @@
 #define ltablib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"

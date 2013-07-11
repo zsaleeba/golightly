@@ -1,7 +1,7 @@
 /*
 ** $Id: luac.c,v 1.69 2011/11/29 17:46:33 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #include <errno.h>
@@ -12,7 +12,7 @@
 #define luac_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 #include "lauxlib.h"
 
 #include "lobject.h"
@@ -108,7 +108,7 @@ static int doargs(int argc, char* argv[])
  }
  if (version)
  {
-  printf("%s\n",LUA_COPYRIGHT);
+  printf("%s\n",GOLIGHTLY_COPYRIGHT);
   if (version==argc-1) exit(EXIT_SUCCESS);
  }
  return i;
@@ -205,7 +205,7 @@ int main(int argc, char* argv[])
 /*
 ** $Id: print.c,v 1.68 2011/09/30 10:21:20 lhf Exp $
 ** print bytecodes
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #include <ctype.h>
@@ -380,7 +380,7 @@ static void PrintHeader(const Proto* f)
  const char* s=f->source ? getstr(f->source) : "=?";
  if (*s=='@' || *s=='=')
   s++;
- else if (*s==LUA_SIGNATURE[0])
+ else if (*s==GOLIGHTLY_SIGNATURE[0])
   s="(bstring)";
  else
   s="(string)";

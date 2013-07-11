@@ -1,7 +1,7 @@
 /*
 ** $Id: ltable.h,v 2.16 2011/08/17 20:26:47 roberto Exp $
 ** Lua tables (hash)
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #ifndef ltable_h

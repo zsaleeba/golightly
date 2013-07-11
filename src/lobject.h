@@ -1,7 +1,7 @@
 /*
 ** $Id: lobject.h,v 2.71 2012/09/11 18:21:44 roberto Exp $
 ** Type definitions for Lua objects
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -13,7 +13,7 @@
 
 
 #include "llimits.h"
-#include "lua.h"
+#include "golightly.h"
 
 
 /*

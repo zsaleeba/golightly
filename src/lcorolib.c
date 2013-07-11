@@ -1,7 +1,7 @@
 /*
 ** $Id: lcorolib.c,v 1.5 2013/02/21 13:44:53 roberto Exp $
 ** Coroutine Library
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -11,7 +11,7 @@
 #define lcorolib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"

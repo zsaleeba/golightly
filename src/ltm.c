@@ -1,7 +1,7 @@
 /*
 ** $Id: ltm.c,v 2.14 2011/06/02 19:31:40 roberto Exp $
 ** Tag methods
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -10,7 +10,7 @@
 #define ltm_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lobject.h"
 #include "lstate.h"

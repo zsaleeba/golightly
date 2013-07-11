@@ -1,7 +1,7 @@
 /*
 ** $Id: lbaselib.c,v 1.276 2013/02/21 13:44:53 roberto Exp $
 ** Basic library
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -14,7 +14,7 @@
 #define lbaselib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
@@ -451,7 +451,7 @@ LUAMOD_API int luaopen_base (lua_State *L) {
   lua_setfield(L, -2, "_G");
   /* open lib into global table */
   luaL_setfuncs(L, base_funcs, 0);
-  lua_pushliteral(L, LUA_VERSION);
+  lua_pushliteral(L, GOLIGHTLY_VERSION);
   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
   return 1;
 }

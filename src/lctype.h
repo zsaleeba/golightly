@@ -1,13 +1,13 @@
 /*
 ** $Id: lctype.h,v 1.12 2011/07/15 12:50:29 roberto Exp $
 ** 'ctype' functions for Lua
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #ifndef lctype_h
 #define lctype_h
 
-#include "lua.h"
+#include "golightly.h"
 
 
 /*
@@ -16,20 +16,20 @@
 ** optimized for the specific needs of Lua
 */
 
-#if !defined(LUA_USE_CTYPE)
+#if !defined(USE_CTYPE)
 
 #if 'A' == 65 && '0' == 48
 /* ASCII case: can use its own tables; faster and fixed */
-#define LUA_USE_CTYPE	0
+#define USE_CTYPE	0
 #else
 /* must use standard C ctype */
-#define LUA_USE_CTYPE	1
+#define USE_CTYPE	1
 #endif
 
 #endif
 
 
-#if !LUA_USE_CTYPE	/* { */
+#if !USE_CTYPE	/* { */
 
 #include <limits.h>
 

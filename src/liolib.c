@@ -1,7 +1,7 @@
 /*
 ** $Id: liolib.c,v 2.111 2013/03/21 13:57:27 roberto Exp $
 ** Standard I/O (and system) library
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -23,7 +23,7 @@
 #define liolib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
@@ -53,7 +53,7 @@
 
 #if !defined(lua_popen)	/* { */
 
-#if defined(LUA_USE_POPEN)	/* { */
+#if defined(USE_POPEN)	/* { */
 
 #define lua_popen(L,c,m)	((void)L, fflush(NULL), popen(c,m))
 #define lua_pclose(L,file)	((void)L, pclose(file))
@@ -86,7 +86,7 @@
 
 #if !defined(lua_fseek)	/* { */
 
-#if defined(LUA_USE_POSIX)
+#if defined(USE_POSIX)
 
 #define l_fseek(f,o,w)		fseeko(f,o,w)
 #define l_ftell(f)		ftello(f)

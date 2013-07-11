@@ -1,7 +1,7 @@
 /*
 ** $Id: ldebug.c,v 2.90 2012/08/16 17:34:28 roberto Exp $
 ** Debug Interface
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -13,7 +13,7 @@
 #define ldebug_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lapi.h"
 #include "lcode.h"

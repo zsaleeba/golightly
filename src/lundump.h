@@ -1,7 +1,7 @@
 /*
 ** $Id: lundump.h,v 1.39 2012/05/08 13:53:33 roberto Exp $
 ** load precompiled Lua chunks
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #ifndef lundump_h
@@ -23,6 +23,6 @@ LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data,
 #define LUAC_TAIL		"\x19\x93\r\n\x1a\n"
 
 /* size in bytes of header of binary files */
-#define LUAC_HEADERSIZE		(sizeof(LUA_SIGNATURE)-sizeof(char)+2+6+sizeof(LUAC_TAIL)-sizeof(char))
+#define LUAC_HEADERSIZE		(sizeof(GOLIGHTLY_SIGNATURE)-sizeof(char)+2+6+sizeof(LUAC_TAIL)-sizeof(char))
 
 #endif

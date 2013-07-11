@@ -1,7 +1,7 @@
 /*
 ** $Id: lapi.c,v 2.171 2013/03/16 21:10:18 roberto Exp $
 ** Lua API
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -11,7 +11,7 @@
 #define lapi_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lapi.h"
 #include "ldebug.h"
@@ -30,8 +30,8 @@
 
 
 const char lua_ident[] =
-  "$LuaVersion: " LUA_COPYRIGHT " $"
-  "$LuaAuthors: " LUA_AUTHORS " $";
+  "$LuaVersion: " GOLIGHTLY_COPYRIGHT " $"
+  "$LuaAuthors: " GOLIGHTLY_AUTHORS " $";
 
 
 /* value at a non-valid index */
@@ -135,7 +135,7 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
 
 
 LUA_API const lua_Number *lua_version (lua_State *L) {
-  static const lua_Number version = LUA_VERSION_NUM;
+  static const lua_Number version = GOLIGHTLY_VERSION_NUM;
   if (L == NULL) return &version;
   else return G(L)->version;
 }

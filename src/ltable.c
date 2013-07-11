@@ -1,7 +1,7 @@
 /*
 ** $Id: ltable.c,v 2.72 2012/09/11 19:37:16 roberto Exp $
 ** Lua tables (hash)
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -23,7 +23,7 @@
 #define ltable_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "ldebug.h"
 #include "ldo.h"

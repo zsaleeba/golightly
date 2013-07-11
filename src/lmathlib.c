@@ -1,7 +1,7 @@
 /*
 ** $Id: lmathlib.c,v 1.83 2013/03/07 18:21:32 roberto Exp $
 ** Standard mathematical library
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -11,7 +11,7 @@
 #define lmathlib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"

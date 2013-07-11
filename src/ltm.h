@@ -1,7 +1,7 @@
 /*
 ** $Id: ltm.h,v 2.11 2011/02/28 17:32:10 roberto Exp $
 ** Tag methods
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #ifndef ltm_h

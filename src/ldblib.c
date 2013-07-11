@@ -1,7 +1,7 @@
 /*
 ** $Id: ldblib.c,v 1.132 2012/01/19 20:14:44 roberto Exp $
 ** Interface from Lua to its debug API
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -12,7 +12,7 @@
 #define ldblib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"

@@ -1,7 +1,7 @@
 /*
 ** $Id: ldump.c,v 2.17 2012/01/23 23:02:10 roberto Exp $
 ** save precompiled Lua chunks
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #include <stddef.h>
@@ -9,7 +9,7 @@
 #define ldump_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lobject.h"
 #include "lstate.h"

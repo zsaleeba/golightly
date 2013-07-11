@@ -1,7 +1,7 @@
 /*
 ** $Id: lfunc.c,v 2.30 2012/10/03 12:36:46 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -10,7 +10,7 @@
 #define lfunc_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lfunc.h"
 #include "lgc.h"

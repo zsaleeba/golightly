@@ -1,7 +1,7 @@
 /*
-** $Id: luaconf.h,v 1.176 2013/03/16 21:10:18 roberto Exp $
+** $Id: gliconf.h,v 1.176 2013/03/16 21:10:18 roberto Exp $
 ** Configuration file for Lua
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -35,42 +35,42 @@
 
 #if defined(LUA_WIN)
 #define LUA_DL_DLL
-#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
+#define USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
 
 
 
-#if defined(LUA_USE_LINUX)
-#define LUA_USE_POSIX
-#define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
-#define LUA_USE_READLINE	/* needs some extra libraries */
-#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
-#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
-#define LUA_USE_LONGLONG	/* assume support for long long */
+#if defined(USE_LINUX)
+#define USE_POSIX
+#define USE_DLOPEN		/* needs an extra library: -ldl */
+#define USE_READLINE	/* needs some extra libraries */
+#define USE_STRTODHEX	/* assume 'strtod' handles hex formats */
+#define USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
+#define USE_LONGLONG	/* assume support for long long */
 #endif
 
-#if defined(LUA_USE_MACOSX)
-#define LUA_USE_POSIX
-#define LUA_USE_DLOPEN		/* does not need -ldl */
-#define LUA_USE_READLINE	/* needs an extra library: -lreadline */
-#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
-#define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
-#define LUA_USE_LONGLONG	/* assume support for long long */
+#if defined(USE_MACOSX)
+#define USE_POSIX
+#define USE_DLOPEN		/* does not need -ldl */
+#define USE_READLINE	/* needs an extra library: -lreadline */
+#define USE_STRTODHEX	/* assume 'strtod' handles hex formats */
+#define USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
+#define USE_LONGLONG	/* assume support for long long */
 #endif
 
 
 
 /*
-@@ LUA_USE_POSIX includes all functionality listed as X/Open System
+@@ USE_POSIX includes all functionality listed as X/Open System
 @* Interfaces Extension (XSI).
 ** CHANGE it (define it) if your system is XSI compatible.
 */
-#if defined(LUA_USE_POSIX)
-#define LUA_USE_MKSTEMP
-#define LUA_USE_ISATTY
-#define LUA_USE_POPEN
-#define LUA_USE_ULONGJMP
-#define LUA_USE_GMTIME_R
+#if defined(USE_POSIX)
+#define USE_MKSTEMP
+#define USE_ISATTY
+#define USE_POPEN
+#define USE_ULONGJMP
+#define USE_GMTIME_R
 #endif
 
 
@@ -99,7 +99,7 @@
 
 #else			/* }{ */
 
-#define LUA_VDIR	LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "/"
+#define LUA_VDIR	GOLIGHTLY_VERSION_MAJOR "." GOLIGHTLY_VERSION_MINOR "/"
 #define LUA_ROOT	"/usr/local/"
 #define LUA_LDIR	LUA_ROOT "share/lua/" LUA_VDIR
 #define LUA_CDIR	LUA_ROOT "lib/lua/" LUA_VDIR
@@ -421,7 +421,7 @@
 */
 #define lua_str2number(s,p)	strtod((s), (p))
 
-#if defined(LUA_USE_STRTODHEX)
+#if defined(USE_STRTODHEX)
 #define lua_strx2number(s,p)	strtod((s), (p))
 #endif
 

@@ -1,7 +1,7 @@
 /*
 ** $Id: lzio.c,v 1.35 2012/05/14 13:34:18 roberto Exp $
 ** Buffered streams
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -10,7 +10,7 @@
 #define lzio_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "llimits.h"
 #include "lmem.h"

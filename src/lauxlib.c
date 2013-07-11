@@ -1,7 +1,7 @@
 /*
 ** $Id: lauxlib.c,v 1.248 2013/03/21 13:54:57 roberto Exp $
 ** Auxiliary functions for building Lua libraries
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -19,7 +19,7 @@
 #define lauxlib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 
@@ -224,7 +224,7 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 
 #if !defined(inspectstat)	/* { */
 
-#if defined(LUA_USE_POSIX)
+#if defined(USE_POSIX)
 
 #include <sys/wait.h>
 
@@ -644,7 +644,7 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   }
   if (skipcomment(&lf, &c))  /* read initial portion */
     lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
-  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+  if (c == GOLIGHTLY_SIGNATURE[0] && filename) {  /* binary file? */
     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
     skipcomment(&lf, &c);  /* re-read initial portion */

@@ -18,25 +18,25 @@
 #include "lualib.h"
 
 
-#if !defined(LUA_PROMPT)
-#define LUA_PROMPT		"> "
-#define LUA_PROMPT2		">> "
+#if !defined(GOLIGHTLY_PROMPT)
+#define GOLIGHTLY_PROMPT		"> "
+#define GOLIGHTLY_PROMPT2		">> "
 #endif
 
-#if !defined(LUA_PROGNAME)
-#define LUA_PROGNAME		"lua"
+#if !defined(GOLIGHTLY_PROGNAME)
+#define GOLIGHTLY_PROGNAME		"gli"
 #endif
 
-#if !defined(LUA_MAXINPUT)
-#define LUA_MAXINPUT		512
+#if !defined(GOLIGHTLY_MAXINPUT)
+#define GOLIGHTLY_MAXINPUT		512
 #endif
 
-#if !defined(LUA_INIT)
-#define LUA_INIT		"LUA_INIT"
+#if !defined(GOLIGHTLY_INIT)
+#define GOLIGHTLY_INIT		"GOLIGHTLY_INIT"
 #endif
 
-#define LUA_INITVERSION  \
-	LUA_INIT "_" GOLIGHTLY_VERSION_MAJOR "_" GOLIGHTLY_VERSION_MINOR
+#define GOLIGHTLY_INITVERSION  \
+	GOLIGHTLY_INIT "_" GOLIGHTLY_VERSION_MAJOR "_" GOLIGHTLY_VERSION_MINOR
 
 
 /*
@@ -46,7 +46,7 @@
 #if defined(USE_ISATTY)
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
-#elif defined(LUA_WIN)
+#elif defined(GOLIGHTLY_WIN)
 #include <io.h>
 #include <stdio.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
@@ -76,7 +76,7 @@
 
 #define lua_readline(L,b,p) \
         ((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
-        fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
+        fgets(b, GOLIGHTLY_MAXINPUT, stdin) != NULL)  /* get line */
 #define lua_saveline(L,idx)	{ (void)L; (void)idx; }
 #define lua_freeline(L,b)	{ (void)L; (void)b; }
 
@@ -87,7 +87,7 @@
 
 static lua_State *globalL = NULL;
 
-static const char *progname = LUA_PROGNAME;
+static const char *progname = GOLIGHTLY_PROGNAME;
 
 
 
@@ -236,7 +236,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
   const char *p;
   lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
   p = lua_tostring(L, -1);
-  if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
+  if (p == NULL) p = (firstline ? GOLIGHTLY_PROMPT : GOLIGHTLY_PROMPT2);
   return p;
 }
 
@@ -258,7 +258,7 @@ static int incomplete (lua_State *L, int status) {
 
 
 static int pushline (lua_State *L, int firstline) {
-  char buffer[LUA_MAXINPUT];
+  char buffer[GOLIGHTLY_MAXINPUT];
   char *b = buffer;
   size_t l;
   const char *prmt = get_prompt(L, firstline);
@@ -421,10 +421,10 @@ static int runargs (lua_State *L, char **argv, int n) {
 
 
 static int handle_luainit (lua_State *L) {
-  const char *name = "=" LUA_INITVERSION;
+  const char *name = "=" GOLIGHTLY_INITVERSION;
   const char *init = getenv(name + 1);
   if (init == NULL) {
-    name = "=" LUA_INIT;
+    name = "=" GOLIGHTLY_INIT;
     init = getenv(name + 1);  /* try alternative name */
   }
   if (init == NULL) return LUA_OK;

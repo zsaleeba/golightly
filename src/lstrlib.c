@@ -1,7 +1,7 @@
 /*
 ** $Id: lstrlib.c,v 1.178 2012/08/14 18:12:34 roberto Exp $
 ** Standard library for string operations and pattern-matching
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 
@@ -14,7 +14,7 @@
 #define lstrlib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "golightly.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
@@ -792,7 +792,7 @@ static int str_gsub (lua_State *L) {
 ** the previous length
 */
 #if !defined(LUA_INTFRMLEN)	/* { */
-#if defined(LUA_USE_LONGLONG)
+#if defined(USE_LONGLONG)
 
 #define LUA_INTFRMLEN		"ll"
 #define LUA_INTFRM_T		long long
@@ -935,7 +935,7 @@ static int str_format (lua_State *L) {
           break;
         }
         case 'e': case 'E': case 'f':
-#if defined(LUA_USE_AFORMAT)
+#if defined(USE_AFORMAT)
         case 'a': case 'A':
 #endif
         case 'g': case 'G': {

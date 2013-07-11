@@ -1,7 +1,7 @@
 /*
 ** $Id: llimits.h,v 1.103 2013/02/20 14:08:56 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #ifndef llimits_h
@@ -12,7 +12,7 @@
 #include <stddef.h>
 
 
-#include "lua.h"
+#include "golightly.h"
 
 
 typedef unsigned LUA_INT32 lu_int32;
@@ -73,7 +73,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 */
 #if !defined(luai_apicheck)
 
-#if defined(LUA_USE_APICHECK)
+#if defined(USE_APICHECK)
 #include <assert.h>
 #define luai_apicheck(L,e)	assert(e)
 #else

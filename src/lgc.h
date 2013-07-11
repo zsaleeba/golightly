@@ -1,7 +1,7 @@
 /*
 ** $Id: lgc.h,v 2.58 2012/09/11 12:53:08 roberto Exp $
 ** Garbage Collector
-** See Copyright Notice in lua.h
+** See Copyright Notice in golightly.h
 */
 
 #ifndef lgc_h

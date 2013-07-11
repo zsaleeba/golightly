@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.285 2013/03/15 13:04:22 roberto Exp $
+** $Id: golightly.h,v 1.285 2013/03/15 13:04:22 roberto Exp $
 ** Lua - A Scripting Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -13,22 +13,22 @@
 #include <stddef.h>
 
 
-#include "luaconf.h"
+#include "gliconf.h"
 
 
-#define LUA_VERSION_MAJOR	"5"
-#define LUA_VERSION_MINOR	"2"
-#define LUA_VERSION_NUM		502
-#define LUA_VERSION_RELEASE	"2"
+#define GOLIGHTLY_VERSION_MAJOR	"0"
+#define GOLIGHTLY_VERSION_MINOR	"1"
+#define GOLIGHTLY_VERSION_NUM		1
+#define GOLIGHTLY_VERSION_RELEASE	"0"
 
-#define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR
-#define LUA_RELEASE	LUA_VERSION "." LUA_VERSION_RELEASE
-#define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2013 Lua.org, PUC-Rio"
-#define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
+#define GOLIGHTLY_VERSION	"Lua " GOLIGHTLY_VERSION_MAJOR "." GOLIGHTLY_VERSION_MINOR
+#define GOLIGHTLY_RELEASE	GOLIGHTLY_VERSION "." GOLIGHTLY_VERSION_RELEASE
+#define GOLIGHTLY_COPYRIGHT	GOLIGHTLY_RELEASE "  Copyright (C) 1994-2013 Zik Saleeba, Lua.org, PUC-Rio"
+#define GOLIGHTLY_AUTHORS	"Z. Saleeba, R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
 
 
 /* mark for precompiled code ('<esc>Lua') */
-#define LUA_SIGNATURE	"\033Lua"
+#define GOLIGHTLY_SIGNATURE	"\033Gli"
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
 #define LUA_MULTRET	(-1)
@@ -114,8 +114,8 @@ typedef LUA_UNSIGNED lua_Unsigned;
 /*
 ** generic extra include file
 */
-#if defined(LUA_USER_H)
-#include LUA_USER_H
+#if defined(USER_H)
+#include USER_H
 #endif
 
 
