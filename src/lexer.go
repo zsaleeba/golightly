@@ -110,17 +110,35 @@ var keywords map[string]int = {
 	"var":         TokenVar, 
 }
 
+// the running state of the lexical analyser
 struct Lexer {
-	line int
-	column int
-	lineBuf []rune
-	lineOffset int
+	sourceFile string // name of the source file
+	pos SrcLoc        // where we are in the source
+	lineBuf []rune    // the current source line
+	
+	tokens TokenList  // the compact encoded token list
 }
 
-// LexSource lexes some source code and adds the tokens to the end of
+// LexLine lexes a line of source code and adds the tokens to the end of
 // the lexed token list. The provided source should end on a line
 // boundary so there are no split tokens at the end. 
-func (l *Lexer) LexText(src string) error {
+func (l *Lexer) LexLine(src string) error {
+	// prepare for this line
+	l.line++
+	l.pos.column = 0
+	l.lineBuf = src
+
+	// get tokens until end of line	
+	ok := true
+	for ok {
+		token, ok, err := getToken()
+		if err != nil {
+			return err
+		}
+		
+		tokens.Add(token)
+	}
+	
 	return errors.New("unimplemented")
 }
 
@@ -135,11 +153,12 @@ func (l *Lexer) LexFile(filename string) error {
 }
 
 // getToken gets the next token from the line buffer.
-// returns the token, success and an error. success is false at end of line.
-func (l *Lexer) getToken() (int, bool, error) {
+// adds the token to the token list.
+// returns success and an error. success is false at end of line.
+func (l *Lexer) getToken() (bool, error) {
 	// are there any characters left?
 	if l.lineOffset >= len(l.lineBuf) {
-		return 0, false, nil
+		return false, nil
 	}
 	
 	// skip whitespace
@@ -147,7 +166,7 @@ func (l *Lexer) getToken() (int, bool, error) {
 	for ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
 		l.lineOffset++
 		if l.lineOffset >= len(l.lineBuf) {
-			return 0, false, nil    // end of line
+			return false, nil    // end of line
 		}
 		ch = l.lineBuf[l.lineOffset]
 	}
@@ -160,11 +179,13 @@ func (l *Lexer) getToken() (int, bool, error) {
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
-			return token, true, nil
+			l.tokens.Add(token)
+			return true, nil
 		}
 		
 		// it must be an identifier
-		return TokenIdentifier, true, nil
+		l.tokens.AddString(TokenIdentifier, word)
+		return true, nil
 	}
 	
 	// is it a numeric literal?
@@ -174,28 +195,30 @@ func (l *Lexer) getToken() (int, bool, error) {
 	}
 	
 	if unicode.IsDigit(ch) || (ch == '.' && unicode.IsDigit(ch2)) {
-		token, err := getNumeric()
-		return token, false, err
+		err := getNumeric()
+		return true, err
 	} 
 	
 	// is it an operator?
 	token, runes, ok := getOperator(ch, ch2)
 	if ok {
-		l.lineOffset += runes
-		return token, true, nil
+		l.pos.column += runes
+		l.tokens.Add(token)
+		return true, nil
 	}
 	
 	// is it a string literal?
 	switch ch {
 		case '\'':
-			l.lineOffset += 2
-			token, err := getCharacterLiteral(ch2)
-			return token, true, err
+			l.pos.column += 2
+			err := getCharacterLiteral(ch2)
+			return err != nil, err
 		
 		case '"':
 		case '`':
-			l.lineOffset++
-			token, err := getStringLiteral(ch == '`')
+			l.pos.column++
+			token, word, err := getStringLiteral(ch == '`')
+			
 			return token, true, err
 	}
 	
@@ -268,8 +291,8 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 			switch ch2 {
 				// look ahead another character
 				var ch3 rune
-				if l.lineOffset+2 < len(l.lineBuf) {
-					ch3 = l.lineBuf[l.lineOffset+2]
+				if l.pos.column+2 < len(l.lineBuf) {
+					ch3 = l.lineBuf[l.pos.column+2]
 				}
 
 				case '<': 
@@ -287,8 +310,8 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 			switch ch2 {
 				// look ahead another character
 				var ch3 rune
-				if l.lineOffset+2 < len(l.lineBuf) {
-					ch3 = l.lineBuf[l.lineOffset+2]
+				if l.pos.column+2 < len(l.lineBuf) {
+					ch3 = l.lineBuf[l.pos.column+2]
 				}
 
 				case '>': 
