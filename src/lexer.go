@@ -1,9 +1,9 @@
 package golightly
 
 import (
-	"unicode"
 	"errors"
 	"io"
+	"unicode"
 )
 
 const (
@@ -55,7 +55,7 @@ const (
 	TokenDot
 	TokenColon
 	TokenSemicolon
-	
+
 	// keywords
 	TokenBreak
 	TokenCase
@@ -82,67 +82,67 @@ const (
 	TokenSwitch
 	TokenType
 	TokenVar
-	
+
 	// literals
 	TokenString
 	TokenRune
 	TokenInt
 	TokenUInt
 	TokenFloat
-	
+
 	// identifiers
 	TokenIdentifier
 )
 
 // a map of keywords for quick lookup
 var keywords map[string]int = map[string]int{
-	"break":       TokenBreak, 
-	"case":        TokenCase, 
+	"break":       TokenBreak,
+	"case":        TokenCase,
 	"chan":        TokenChan,
-	"const":       TokenConst, 
-	"continue":    TokenContinue, 
-	"default":     TokenDefault, 
-	"defer":       TokenDefer, 
-	"else":        TokenElse, 
-	"fallthrough": TokenFallthrough, 
-	"for":         TokenFor, 
-	"func":        TokenFunc, 
-	"go":          TokenGo, 
-	"goto":        TokenGoto, 
-	"if":          TokenIf, 
-	"import":      TokenImport, 
-	"interface":   TokenInterface, 
-	"map":         TokenMap, 
-	"package":     TokenPackage, 
-	"range":       TokenRange, 
-	"return":      TokenReturn, 
-	"select":      TokenSelect, 
-	"struct":      TokenStruct, 
-	"switch":      TokenSwitch, 
-	"type":        TokenType, 
-	"var":         TokenVar, 
+	"const":       TokenConst,
+	"continue":    TokenContinue,
+	"default":     TokenDefault,
+	"defer":       TokenDefer,
+	"else":        TokenElse,
+	"fallthrough": TokenFallthrough,
+	"for":         TokenFor,
+	"func":        TokenFunc,
+	"go":          TokenGo,
+	"goto":        TokenGoto,
+	"if":          TokenIf,
+	"import":      TokenImport,
+	"interface":   TokenInterface,
+	"map":         TokenMap,
+	"package":     TokenPackage,
+	"range":       TokenRange,
+	"return":      TokenReturn,
+	"select":      TokenSelect,
+	"struct":      TokenStruct,
+	"switch":      TokenSwitch,
+	"type":        TokenType,
+	"var":         TokenVar,
 }
 
 // the running state of the lexical analyser
 type Lexer struct {
 	sourceFile string // name of the source file
-	startPos SrcLoc   // where this token started in the source
-	pos SrcLoc        // where we are in the source
-	lineBuf []rune    // the current source line
-	
-	tokens TokenList  // the compact encoded token list
+	startPos   SrcLoc // where this token started in the source
+	pos        SrcLoc // where we are in the source
+	lineBuf    []rune // the current source line
+
+	tokens TokenList // the compact encoded token list
 }
 
 // LexLine lexes a line of source code and adds the tokens to the end of
 // the lexed token list. The provided source should end on a line
-// boundary so there are no split tokens at the end. 
+// boundary so there are no split tokens at the end.
 func (l *Lexer) LexLine(src string) error {
 	// prepare for this line
 	l.pos.Line++
 	l.pos.Column = 0
 	l.lineBuf = []rune(src)
 
-	// get tokens until end of line	
+	// get tokens until end of line
 	ok := true
 	for ok {
 		var err error
@@ -151,7 +151,7 @@ func (l *Lexer) LexLine(src string) error {
 			return err
 		}
 	}
-	
+
 	return errors.New("unimplemented")
 }
 
@@ -173,47 +173,47 @@ func (l *Lexer) getToken() (bool, error) {
 	if l.pos.Column >= len(l.lineBuf) {
 		return false, nil
 	}
-	
+
 	// skip leading whitespace
 	ch := l.lineBuf[l.pos.Column]
 	for ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
 		l.pos.Column++
 		if l.pos.Column >= len(l.lineBuf) {
-			return false, nil    // end of line
+			return false, nil // end of line
 		}
 		ch = l.lineBuf[l.pos.Column]
 	}
-	
+
 	l.startPos = l.pos
-	
+
 	// is it an identifier?
 	if unicode.IsLetter(ch) || ch == '_' {
 		// get the word
 		word := l.getWord()
-		
+
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
 			l.tokens.Add(l.startPos, token)
 			return true, nil
 		}
-		
+
 		// it must be an identifier
 		l.tokens.AddString(l.startPos, TokenIdentifier, word)
 		return true, nil
 	}
-	
+
 	// is it a numeric literal?
 	var ch2 rune
 	if l.pos.Column+1 < len(l.lineBuf) {
 		ch2 = l.lineBuf[l.pos.Column+1]
 	}
-	
+
 	if unicode.IsDigit(ch) || (ch == '.' && unicode.IsDigit(ch2)) {
 		err := l.getNumeric()
 		return true, err
-	} 
-	
+	}
+
 	// is it an operator?
 	token, runes, ok := l.getOperator(ch, ch2)
 	if ok {
@@ -221,20 +221,20 @@ func (l *Lexer) getToken() (bool, error) {
 		l.tokens.Add(l.startPos, token)
 		return true, nil
 	}
-	
+
 	// is it a string literal?
 	switch ch {
-		case '\'':
-			l.pos.Column += 2
-			err := l.getCharacterLiteral(ch2)
-			return err != nil, err
-		
-		case '"', '`':
-			l.pos.Column++
-			err := l.getStringLiteral(ch == '`')
-			return err != nil, err
+	case '\'':
+		l.pos.Column += 2
+		err := l.getCharacterLiteral(ch2)
+		return err != nil, err
+
+	case '"', '`':
+		l.pos.Column++
+		err := l.getStringLiteral(ch == '`')
+		return err != nil, err
 	}
-	
+
 	return false, nil
 }
 
@@ -244,130 +244,155 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 	// operator lexing is performed as a hard-coded trie for speed.
 
 	switch ch {
-		case '+':
-			switch ch2 {
-				case '=': return TokenAddAssign, 2, true
-				case '+': return TokenIncrement, 2, true
-				default:  return TokenAdd, 1, true
-			}
-			
-		case '-':
-			switch ch2 {
-				case '=': return TokenSubtractAssign, 2, true
-				case '-': return TokenDecrement, 2, true
-				default:  return TokenSubtract, 1, true
-			}
-			
-		case '*':
-			if ch2 == '=' {
-				return TokenMultiplyAssign, 2, true
-			} else {
-				return TokenMultiply, 1, true
-			}
-			
-		case '/':
-			if ch2 == '=' {
-				return TokenDivideAssign, 2, true
-			} else {
-				return TokenDivide, 1, true
-			}
-			
-		case '%':
-			if ch2 == '=' {
-				return TokenModulusAssign, 2, true
-			} else {
-				return TokenModulus, 1, true
-			}
-			
-		case '&':
-			switch ch2 {
-				case '=': return TokenBitwiseAndAssign, 2, true
-				case '&': return TokenLogicalAnd, 2, true
-				default:  return TokenBitwiseAnd, 1, true
-			}
-			
-		case '|':
-			switch ch2 {
-				case '=': return TokenBitwiseOrAssign, 2, true
-				case '|': return TokenLogicalOr, 2, true
-				default:  return TokenBitwiseOr, 1, true
-			}
-			
-		case '^':
-			if ch2 == '=' {
-				return TokenBitwiseExorAssign, 2, true
-			} else {
-				return TokenBitwiseExor, 1, true
-			}
-			
-		case '<':
-			switch ch2 {
-				case '<': 
-					// look ahead another character
-					var ch3 rune
-					if l.pos.Column+2 < len(l.lineBuf) {
-						ch3 = l.lineBuf[l.pos.Column+2]
-					}
-	
-					if ch3 == '=' {
-						return TokenShiftLeftAssign, 3, true
-					} else {
-						return TokenShiftLeft, 2, true
-					}
-				case '=': return TokenLessEqual, 2, true
-				case '-': return TokenChannelArrow, 2, true
-				default:  return TokenLess, 1, true
-			}
-			
-		case '>':
-			switch ch2 {
-				case '>': 
-					// look ahead another character
-					var ch3 rune
-					if l.pos.Column+2 < len(l.lineBuf) {
-						ch3 = l.lineBuf[l.pos.Column+2]
-					}
-	
-					if ch3 == '=' {
-						return TokenShiftRightAssign, 3, true
-					} else {
-						return TokenShiftRight, 2, true
-					}
-				case '=': return TokenGreaterEqual, 2, true
-				default:  return TokenGreater, 1, true
-			}
-			
+	case '+':
+		switch ch2 {
 		case '=':
-			if ch2 == '=' {
-				return TokenEquals, 2, true
-			} else {
-				return TokenAssign, 1, true
+			return TokenAddAssign, 2, true
+		case '+':
+			return TokenIncrement, 2, true
+		default:
+			return TokenAdd, 1, true
+		}
+
+	case '-':
+		switch ch2 {
+		case '=':
+			return TokenSubtractAssign, 2, true
+		case '-':
+			return TokenDecrement, 2, true
+		default:
+			return TokenSubtract, 1, true
+		}
+
+	case '*':
+		if ch2 == '=' {
+			return TokenMultiplyAssign, 2, true
+		} else {
+			return TokenMultiply, 1, true
+		}
+
+	case '/':
+		if ch2 == '=' {
+			return TokenDivideAssign, 2, true
+		} else {
+			return TokenDivide, 1, true
+		}
+
+	case '%':
+		if ch2 == '=' {
+			return TokenModulusAssign, 2, true
+		} else {
+			return TokenModulus, 1, true
+		}
+
+	case '&':
+		switch ch2 {
+		case '=':
+			return TokenBitwiseAndAssign, 2, true
+		case '&':
+			return TokenLogicalAnd, 2, true
+		default:
+			return TokenBitwiseAnd, 1, true
+		}
+
+	case '|':
+		switch ch2 {
+		case '=':
+			return TokenBitwiseOrAssign, 2, true
+		case '|':
+			return TokenLogicalOr, 2, true
+		default:
+			return TokenBitwiseOr, 1, true
+		}
+
+	case '^':
+		if ch2 == '=' {
+			return TokenBitwiseExorAssign, 2, true
+		} else {
+			return TokenBitwiseExor, 1, true
+		}
+
+	case '<':
+		switch ch2 {
+		case '<':
+			// look ahead another character
+			var ch3 rune
+			if l.pos.Column+2 < len(l.lineBuf) {
+				ch3 = l.lineBuf[l.pos.Column+2]
 			}
-			
-		case '!':
-			if ch2 == '=' {
-				return TokenNotEqual, 2, true
+
+			if ch3 == '=' {
+				return TokenShiftLeftAssign, 3, true
 			} else {
-				return TokenNot, 1, true
+				return TokenShiftLeft, 2, true
 			}
-			
-		case ':':
-			if ch2 == '=' {
-				return TokenDeclareAssign, 2, true
+		case '=':
+			return TokenLessEqual, 2, true
+		case '-':
+			return TokenChannelArrow, 2, true
+		default:
+			return TokenLess, 1, true
+		}
+
+	case '>':
+		switch ch2 {
+		case '>':
+			// look ahead another character
+			var ch3 rune
+			if l.pos.Column+2 < len(l.lineBuf) {
+				ch3 = l.lineBuf[l.pos.Column+2]
+			}
+
+			if ch3 == '=' {
+				return TokenShiftRightAssign, 3, true
 			} else {
-				return TokenColon, 1, true
+				return TokenShiftRight, 2, true
 			}
-			
-		case '.': return TokenDot, 1, true
-		case ',': return TokenComma, 1, true
-		case '(': return TokenOpenGroup, 1, true
-		case ')': return TokenCloseGroup, 1, true
-		case '[': return TokenOpenOption, 1, true
-		case ']': return TokenCloseOption, 1, true
-		case '{': return TokenOpenBlock, 1, true
-		case '}': return TokenCloseBlock, 1, true
+		case '=':
+			return TokenGreaterEqual, 2, true
+		default:
+			return TokenGreater, 1, true
+		}
+
+	case '=':
+		if ch2 == '=' {
+			return TokenEquals, 2, true
+		} else {
+			return TokenAssign, 1, true
+		}
+
+	case '!':
+		if ch2 == '=' {
+			return TokenNotEqual, 2, true
+		} else {
+			return TokenNot, 1, true
+		}
+
+	case ':':
+		if ch2 == '=' {
+			return TokenDeclareAssign, 2, true
+		} else {
+			return TokenColon, 1, true
+		}
+
+	case '.':
+		return TokenDot, 1, true
+	case ',':
+		return TokenComma, 1, true
+	case '(':
+		return TokenOpenGroup, 1, true
+	case ')':
+		return TokenCloseGroup, 1, true
+	case '[':
+		return TokenOpenOption, 1, true
+	case ']':
+		return TokenCloseOption, 1, true
+	case '{':
+		return TokenOpenBlock, 1, true
+	case '}':
+		return TokenCloseBlock, 1, true
 	}
-	
+
 	return 0, 0, false
 }
 
@@ -376,13 +401,13 @@ func (l *Lexer) getWord() string {
 	// get character until end of line
 	for ; l.pos.Column < len(l.lineBuf); l.pos.Column++ {
 		ch := l.lineBuf[l.pos.Column]
-		
+
 		// done at end of word
 		if !unicode.IsLetter(ch) && ch != '_' {
 			return string(l.lineBuf[l.startPos.Column:l.pos.Column])
 		}
 	}
-	
+
 	// reached end of line
 	return string(l.lineBuf[l.startPos.Column:l.pos.Column])
 }
