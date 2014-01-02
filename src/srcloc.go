@@ -1,6 +1,6 @@
 package golightly
 
-type SrcLoc {
+type SrcLoc struct {
 	Line int
 	Column int
 }

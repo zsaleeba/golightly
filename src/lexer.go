@@ -2,6 +2,8 @@ package golightly
 
 import (
 	"unicode"
+	"errors"
+	"io"
 )
 
 const (
@@ -20,6 +22,7 @@ const (
 	TokenAddAssign
 	TokenSubtractAssign
 	TokenMultiplyAssign
+	TokenDivideAssign
 	TokenModulusAssign
 	TokenBitwiseAndAssign
 	TokenBitwiseOrAssign
@@ -37,9 +40,9 @@ const (
 	TokenGreater
 	TokenAssign
 	TokenNot
-	TokenNotEquals
-	TokenLessEquals
-	TokenGreaterEquals
+	TokenNotEqual
+	TokenLessEqual
+	TokenGreaterEqual
 	TokenDeclareAssign
 	TokenEllipsis
 	TokenOpenGroup
@@ -79,10 +82,20 @@ const (
 	TokenSwitch
 	TokenType
 	TokenVar
+	
+	// literals
+	TokenString
+	TokenRune
+	TokenInt
+	TokenUInt
+	TokenFloat
+	
+	// identifiers
+	TokenIdentifier
 )
 
 // a map of keywords for quick lookup
-var keywords map[string]int = {
+var keywords map[string]int = map[string]int{
 	"break":       TokenBreak, 
 	"case":        TokenCase, 
 	"chan":        TokenChan,
@@ -111,8 +124,9 @@ var keywords map[string]int = {
 }
 
 // the running state of the lexical analyser
-struct Lexer {
+type Lexer struct {
 	sourceFile string // name of the source file
+	startPos SrcLoc   // where this token started in the source
 	pos SrcLoc        // where we are in the source
 	lineBuf []rune    // the current source line
 	
@@ -124,26 +138,25 @@ struct Lexer {
 // boundary so there are no split tokens at the end. 
 func (l *Lexer) LexLine(src string) error {
 	// prepare for this line
-	l.line++
-	l.pos.column = 0
-	l.lineBuf = src
+	l.pos.Line++
+	l.pos.Column = 0
+	l.lineBuf = []rune(src)
 
 	// get tokens until end of line	
 	ok := true
 	for ok {
-		token, ok, err := getToken()
+		var err error
+		ok, err = l.getToken()
 		if err != nil {
 			return err
 		}
-		
-		tokens.Add(token)
 	}
 	
 	return errors.New("unimplemented")
 }
 
 // LexReader reads all input from a Reader and lexes it until EOF.
-func (l *Lexer) LexReader(r Reader) error {
+func (l *Lexer) LexReader(r io.Reader) error {
 	return errors.New("unimplemented")
 }
 
@@ -157,72 +170,72 @@ func (l *Lexer) LexFile(filename string) error {
 // returns success and an error. success is false at end of line.
 func (l *Lexer) getToken() (bool, error) {
 	// are there any characters left?
-	if l.lineOffset >= len(l.lineBuf) {
+	if l.pos.Column >= len(l.lineBuf) {
 		return false, nil
 	}
 	
-	// skip whitespace
-	ch := l.lineBuf[l.lineOffset]
+	// skip leading whitespace
+	ch := l.lineBuf[l.pos.Column]
 	for ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
-		l.lineOffset++
-		if l.lineOffset >= len(l.lineBuf) {
+		l.pos.Column++
+		if l.pos.Column >= len(l.lineBuf) {
 			return false, nil    // end of line
 		}
-		ch = l.lineBuf[l.lineOffset]
+		ch = l.lineBuf[l.pos.Column]
 	}
+	
+	l.startPos = l.pos
 	
 	// is it an identifier?
 	if unicode.IsLetter(ch) || ch == '_' {
 		// get the word
-		word := getWord()
+		word := l.getWord()
 		
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
-			l.tokens.Add(token)
+			l.tokens.Add(l.startPos, token)
 			return true, nil
 		}
 		
 		// it must be an identifier
-		l.tokens.AddString(TokenIdentifier, word)
+		l.tokens.AddString(l.startPos, TokenIdentifier, word)
 		return true, nil
 	}
 	
 	// is it a numeric literal?
 	var ch2 rune
-	if l.lineOffset+1 < len(l.lineBuf) {
-		ch2 = l.lineBuf[l.lineOffset+1]
+	if l.pos.Column+1 < len(l.lineBuf) {
+		ch2 = l.lineBuf[l.pos.Column+1]
 	}
 	
 	if unicode.IsDigit(ch) || (ch == '.' && unicode.IsDigit(ch2)) {
-		err := getNumeric()
+		err := l.getNumeric()
 		return true, err
 	} 
 	
 	// is it an operator?
-	token, runes, ok := getOperator(ch, ch2)
+	token, runes, ok := l.getOperator(ch, ch2)
 	if ok {
-		l.pos.column += runes
-		l.tokens.Add(token)
+		l.pos.Column += runes
+		l.tokens.Add(l.startPos, token)
 		return true, nil
 	}
 	
 	// is it a string literal?
 	switch ch {
 		case '\'':
-			l.pos.column += 2
-			err := getCharacterLiteral(ch2)
+			l.pos.Column += 2
+			err := l.getCharacterLiteral(ch2)
 			return err != nil, err
 		
-		case '"':
-		case '`':
-			l.pos.column++
-			token, word, err := getStringLiteral(ch == '`')
-			
-			return token, true, err
+		case '"', '`':
+			l.pos.Column++
+			err := l.getStringLiteral(ch == '`')
+			return err != nil, err
 	}
 	
-	return 0, false
+	return false, nil
 }
 
 // getOperator gets an operator token.
@@ -282,20 +295,20 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 			
 		case '^':
 			if ch2 == '=' {
-				return TokenExorAssign, 2, true
+				return TokenBitwiseExorAssign, 2, true
 			} else {
-				return TokenExor, 1, true
+				return TokenBitwiseExor, 1, true
 			}
 			
 		case '<':
 			switch ch2 {
-				// look ahead another character
-				var ch3 rune
-				if l.pos.column+2 < len(l.lineBuf) {
-					ch3 = l.lineBuf[l.pos.column+2]
-				}
-
 				case '<': 
+					// look ahead another character
+					var ch3 rune
+					if l.pos.Column+2 < len(l.lineBuf) {
+						ch3 = l.lineBuf[l.pos.Column+2]
+					}
+	
 					if ch3 == '=' {
 						return TokenShiftLeftAssign, 3, true
 					} else {
@@ -308,13 +321,13 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 			
 		case '>':
 			switch ch2 {
-				// look ahead another character
-				var ch3 rune
-				if l.pos.column+2 < len(l.lineBuf) {
-					ch3 = l.lineBuf[l.pos.column+2]
-				}
-
 				case '>': 
+					// look ahead another character
+					var ch3 rune
+					if l.pos.Column+2 < len(l.lineBuf) {
+						ch3 = l.lineBuf[l.pos.Column+2]
+					}
+	
 					if ch3 == '=' {
 						return TokenShiftRightAssign, 3, true
 					} else {
@@ -333,7 +346,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 			
 		case '!':
 			if ch2 == '=' {
-				return TokenNotAssign, 2, true
+				return TokenNotEqual, 2, true
 			} else {
 				return TokenNot, 1, true
 			}
@@ -356,4 +369,35 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 	}
 	
 	return 0, 0, false
+}
+
+// getWord gets an identifier. returns the word.
+func (l *Lexer) getWord() string {
+	// get character until end of line
+	for ; l.pos.Column < len(l.lineBuf); l.pos.Column++ {
+		ch := l.lineBuf[l.pos.Column]
+		
+		// done at end of word
+		if !unicode.IsLetter(ch) && ch != '_' {
+			return string(l.lineBuf[l.startPos.Column:l.pos.Column])
+		}
+	}
+	
+	// reached end of line
+	return string(l.lineBuf[l.startPos.Column:l.pos.Column])
+}
+
+// getNumeric gets a number.
+func (l *Lexer) getNumeric() error {
+	return errors.New("unimplemented")
+}
+
+// getCharacterLiteral gets a character literal.
+func (l *Lexer) getCharacterLiteral(ch rune) error {
+	return errors.New("unimplemented")
+}
+
+// getStringLiteral gets a string literal.
+func (l *Lexer) getStringLiteral(raw bool) error {
+	return errors.New("unimplemented")
 }

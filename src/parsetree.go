@@ -1,5 +1,5 @@
 package golightly
 
-struct ParseTree {
+type ParseTree struct {
 	
 }
