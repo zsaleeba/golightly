@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"unicode"
+	"strconv"
 )
 
 const (
@@ -87,7 +88,7 @@ const (
 	TokenString
 	TokenRune
 	TokenInt
-	TokenUInt
+	TokenUint
 	TokenFloat
 
 	// identifiers
@@ -226,7 +227,7 @@ func (l *Lexer) getToken() (bool, error) {
 	switch ch {
 	case '\'':
 		l.pos.Column += 2
-		err := l.getCharacterLiteral(ch2)
+		err := l.getRuneLiteral(ch2)
 		return err != nil, err
 
 	case '"', '`':
@@ -246,69 +247,69 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 	switch ch {
 	case '+':
 		switch ch2 {
-		case '=':
+		case '=':  // '+='
 			return TokenAddAssign, 2, true
-		case '+':
+		case '+':  // '++'
 			return TokenIncrement, 2, true
-		default:
+		default:   // '+'
 			return TokenAdd, 1, true
 		}
 
 	case '-':
 		switch ch2 {
-		case '=':
+		case '=':  // '-='
 			return TokenSubtractAssign, 2, true
-		case '-':
+		case '-':  // '--'
 			return TokenDecrement, 2, true
-		default:
+		default:   // '-'
 			return TokenSubtract, 1, true
 		}
 
 	case '*':
-		if ch2 == '=' {
+		if ch2 == '=' {  // '*='
 			return TokenMultiplyAssign, 2, true
-		} else {
+		} else {  // '*'
 			return TokenMultiply, 1, true
 		}
 
 	case '/':
-		if ch2 == '=' {
+		if ch2 == '=' {  // '/='
 			return TokenDivideAssign, 2, true
-		} else {
+		} else {  // '/'
 			return TokenDivide, 1, true
 		}
 
 	case '%':
-		if ch2 == '=' {
+		if ch2 == '=' {  // '%='
 			return TokenModulusAssign, 2, true
-		} else {
+		} else {  // '%'
 			return TokenModulus, 1, true
 		}
 
 	case '&':
 		switch ch2 {
-		case '=':
+		case '=':  // '&='
 			return TokenBitwiseAndAssign, 2, true
-		case '&':
+		case '&':  // '&&'
 			return TokenLogicalAnd, 2, true
-		default:
+		default:   // '&'
 			return TokenBitwiseAnd, 1, true
 		}
 
 	case '|':
 		switch ch2 {
-		case '=':
+		case '=':  // '|='
 			return TokenBitwiseOrAssign, 2, true
-		case '|':
+		case '|':  // '||'
 			return TokenLogicalOr, 2, true
-		default:
+		default:   // '|'
 			return TokenBitwiseOr, 1, true
 		}
 
 	case '^':
-		if ch2 == '=' {
+		if ch2 == '=' {  // '^='
 			return TokenBitwiseExorAssign, 2, true
-		} else {
+		} else {  // '^'
 			return TokenBitwiseExor, 1, true
 		}
 
@@ -321,16 +322,16 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 				ch3 = l.lineBuf[l.pos.Column+2]
 			}
 
-			if ch3 == '=' {
+			if ch3 == '=' {  // '<<='
 				return TokenShiftLeftAssign, 3, true
-			} else {
+			} else {  // '<<'
 				return TokenShiftLeft, 2, true
 			}
-		case '=':
+		case '=':  // '<='
 			return TokenLessEqual, 2, true
-		case '-':
+		case '-':  // '<-'
 			return TokenChannelArrow, 2, true
-		default:
+		default:  // '<'
 			return TokenLess, 1, true
 		}
 
@@ -343,53 +344,53 @@ func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
 				ch3 = l.lineBuf[l.pos.Column+2]
 			}
 
-			if ch3 == '=' {
+			if ch3 == '=' {  // '>>='
 				return TokenShiftRightAssign, 3, true
-			} else {
+			} else {  // '>>'
 				return TokenShiftRight, 2, true
 			}
-		case '=':
+		case '=':  // '>='
 			return TokenGreaterEqual, 2, true
-		default:
+		default:  // '>'
 			return TokenGreater, 1, true
 		}
 
 	case '=':
-		if ch2 == '=' {
+		if ch2 == '=' {  // '=='
 			return TokenEquals, 2, true
-		} else {
+		} else {  // '='
 			return TokenAssign, 1, true
 		}
 
 	case '!':
-		if ch2 == '=' {
+		if ch2 == '=' {  // '!='
 			return TokenNotEqual, 2, true
-		} else {
+		} else {  // '!'
 			return TokenNot, 1, true
 		}
 
 	case ':':
-		if ch2 == '=' {
+		if ch2 == '=' {  // ':='
 			return TokenDeclareAssign, 2, true
-		} else {
+		} else {  // ':'
 			return TokenColon, 1, true
 		}
 
-	case '.':
+	case '.':  // '.'
 		return TokenDot, 1, true
-	case ',':
+	case ',':  // ','
 		return TokenComma, 1, true
-	case '(':
+	case '(':  // '('
 		return TokenOpenGroup, 1, true
-	case ')':
+	case ')':  // ')'
 		return TokenCloseGroup, 1, true
-	case '[':
+	case '[':  // '['
 		return TokenOpenOption, 1, true
-	case ']':
+	case ']':  // ']'
 		return TokenCloseOption, 1, true
-	case '{':
+	case '{':  // '{'
 		return TokenOpenBlock, 1, true
-	case '}':
+	case '}':  // '}'
 		return TokenCloseBlock, 1, true
 	}
 
@@ -413,16 +414,70 @@ func (l *Lexer) getWord() string {
 }
 
 // getNumeric gets a number.
+// XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
 func (l *Lexer) getNumeric() error {
-	return errors.New("unimplemented")
+	// scan for a non-digit character
+	var col int
+	for col = l.pos.Column; col < len(l.lineBuf) && unicode.IsDigit(l.lineBuf[col]); col++ {
+	}
+
+	// is the next character a "." or "e"? If so, it's a float.
+	if col >= len(l.lineBuf) && (l.lineBuf[col] == '.' || l.lineBuf[col] == 'e') {
+		// it's a float, scan for the end
+		for col = l.pos.Column; col < len(l.lineBuf) && (unicode.IsDigit(l.lineBuf[col]) || l.lineBuf[col] == '.' || l.lineBuf[col] == 'e'); col++ {
+		}
+
+		// parse the float
+		v, err := strconv.ParseFloat(string(l.lineBuf[l.pos.Column:col]), 128)
+		l.pos.Column = col
+		if err != nil {
+			return err
+		}
+
+		l.tokens.AddFloat(l.pos, TokenFloat, v)
+		return nil
+	} else {
+		// it's an int, parse it
+		v, err := strconv.ParseUint(string(l.lineBuf[l.pos.Column:col]), 10, 64)
+		l.pos.Column = col
+		if err != nil {
+			return err
+		}
+
+		l.tokens.AddUInt(l.pos, TokenUint, v)
+		return nil
+	}
 }
 
-// getCharacterLiteral gets a character literal.
-func (l *Lexer) getCharacterLiteral(ch rune) error {
-	return errors.New("unimplemented")
+// getRuneLiteral gets a single character rune literal.
+// XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
+func (l *Lexer) getRuneLiteral(ch rune) error {
+	l.tokens.AddRune(l.pos, ch)
+	if l.lineBuf[l.pos.Column] != '\'' {
+		return errors.New("expected closing single quote in rune literal")
+	}
+
+	return nil
 }
 
 // getStringLiteral gets a string literal.
+// XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
 func (l *Lexer) getStringLiteral(raw bool) error {
-	return errors.New("unimplemented")
+	sCol := l.pos.Column
+	var col int
+
+	if raw {
+		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '`'; col++ {
+		}
+	} else {
+		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '\''; col++ {
+		}
+	}
+
+	if col == len(l.lineBuf) {
+		return errors.New("can't handle multi-line strings currently")
+	}
+
+	l.tokens.AddString(l.pos, TokenString, string(l.lineBuf[sCol:col]))
+	return nil
 }
