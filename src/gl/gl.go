@@ -4,7 +4,7 @@ import "fmt"
 
 func usage() {
 	fmt.Print(
-`Format: goli [options] [file.go...]
+`Format: goli [options] [<file.go>|<directory>]...
 	If no file arguments are provided the current directory will be searched
 	for .go files.
 Options:
