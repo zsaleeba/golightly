@@ -5,11 +5,15 @@ import (
 	"io"
 	"unicode"
 	"strconv"
+	"os"
+	"bufio"
 )
 
+// tokens indicate which type of symbol this lexical item is
+type Token int
 const (
 	// operators
-	TokenAdd = iota
+	TokenAdd Token = iota
 	TokenSubtract
 	TokenMultiply
 	TokenDivide
@@ -89,14 +93,15 @@ const (
 	TokenRune
 	TokenInt
 	TokenUint
-	TokenFloat
+	TokenFloat32
+	TokenFloat64
 
 	// identifiers
 	TokenIdentifier
 )
 
 // a map of keywords for quick lookup
-var keywords map[string]int = map[string]int{
+var keywords map[string]Token = map[string]Token{
 	"break":       TokenBreak,
 	"case":        TokenCase,
 	"chan":        TokenChan,
@@ -131,7 +136,7 @@ type Lexer struct {
 	pos        SrcLoc // where we are in the source
 	lineBuf    []rune // the current source line
 
-	tokens TokenList // the compact encoded token list
+	tokens *TokenList // the compact encoded token list
 }
 
 // LexLine lexes a line of source code and adds the tokens to the end of
@@ -153,17 +158,54 @@ func (l *Lexer) LexLine(src string) error {
 		}
 	}
 
-	return errors.New("unimplemented")
+	return nil
 }
 
 // LexReader reads all input from a Reader and lexes it until EOF.
 func (l *Lexer) LexReader(r io.Reader) error {
-	return errors.New("unimplemented")
+	// start afresh
+	l.pos.Line = 1
+	l.pos.Column = 0
+	l.startPos = l.pos
+	l.tokens = NewTokenList(l.sourceFile)
+
+	// get lines until EOF
+	scanner := bufio.NewScanner(r)
+	var err error
+	for scanner.Scan() {
+		// get the line
+		l.lineBuf = []rune(scanner.Text())
+
+		// tokenise the line
+		var ok bool
+		for ok, err = l.getToken(); ok && err == nil; {
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	// check for any line scanner errors
+	err = scanner.Err()
+	return err
 }
 
 // LexFile opens a file and lexes the entire contents.
 func (l *Lexer) LexFile(filename string) error {
-	return errors.New("unimplemented")
+	// open the file
+	inFile, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+
+	defer inFile.Close()
+
+	l.sourceFile = filename
+	reader := bufio.NewReader(inFile)
+
+	// now lex it
+	return l.LexReader(reader)
 }
 
 // getToken gets the next token from the line buffer.
@@ -241,7 +283,7 @@ func (l *Lexer) getToken() (bool, error) {
 
 // getOperator gets an operator token.
 // returns the token, the number of characters absorbed and success.
-func (l *Lexer) getOperator(ch, ch2 rune) (int, int, bool) {
+func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 	// operator lexing is performed as a hard-coded trie for speed.
 
 	switch ch {
@@ -434,7 +476,7 @@ func (l *Lexer) getNumeric() error {
 			return err
 		}
 
-		l.tokens.AddFloat(l.pos, TokenFloat, v)
+		l.tokens.AddFloat(l.pos, v)
 		return nil
 	} else {
 		// it's an int, parse it
@@ -452,7 +494,7 @@ func (l *Lexer) getNumeric() error {
 // getRuneLiteral gets a single character rune literal.
 // XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
 func (l *Lexer) getRuneLiteral(ch rune) error {
-	l.tokens.AddRune(l.pos, ch)
+	l.tokens.AddUInt(l.pos, TokenRune, uint64(ch))
 	if l.lineBuf[l.pos.Column] != '\'' {
 		return errors.New("expected closing single quote in rune literal")
 	}

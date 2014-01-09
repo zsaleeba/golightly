@@ -1,12 +1,15 @@
 package golightly
 
+import (
+	"bytes"
+	"encoding/binary"
+)
+
 // an encoded, compact form of the tokens
 type TokenList struct {
 	last   SrcLoc
-	tokens []byte
+	tokens *bytes.Buffer
 }
-
-const TokenListSizeStart = 256
 
 const TokenFlagInt16 = 0xfd
 const TokenFlagInt32 = 0xfe
@@ -16,29 +19,46 @@ func NewTokenList(filename string) *TokenList {
 	tl := new(TokenList)
 	tl.last.Line = 1
 	tl.last.Column = 1
-	tl.tokens = make([]byte, 0, TokenListSizeStart)
+	tl.tokens = new(bytes.Buffer)
 
 	return tl
 }
 
-func (tl *TokenList) Add(pos SrcLoc, token int) {
+func (tl *TokenList) Add(pos SrcLoc, token Token) {
 	tl.EncodeLoc(pos)
-	tl.EncodeUint64(uint64(token))
+	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
 }
 
-func (tl *TokenList) AddInt(pos SrcLoc, token int, val int64) {
-	tl.Add(pos, token)
+func (tl *TokenList) AddInt(pos SrcLoc, token Token, val int64) {
+	tl.EncodeLoc(pos)
+	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
 	tl.EncodeInt64(val)
 }
 
-func (tl *TokenList) AddUInt(pos SrcLoc, token int, val uint64) {
-	tl.Add(pos, token)
+func (tl *TokenList) AddUInt(pos SrcLoc, token Token, val uint64) {
+	tl.EncodeLoc(pos)
+	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
 	tl.EncodeUint64(val)
 }
 
-func (tl *TokenList) AddString(pos SrcLoc, token int, str string) {
-	tl.Add(pos, token)
-	tl.EncodeString(str)
+func (tl *TokenList) AddString(pos SrcLoc, token Token, str string) {
+	tl.EncodeLoc(pos)
+	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
+	binary.Write(tl.tokens, binary.LittleEndian, str)
+}
+
+func (tl *TokenList) AddFloat(pos SrcLoc, val float64) {
+	tl.EncodeLoc(pos)
+	v32 := float32(val)
+	if float64(v32) == val {
+		// can be represented as a float32
+		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFloat32))
+		binary.Write(tl.tokens, binary.LittleEndian, v32)
+	} else {
+		// we need the full 64 bits
+		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFloat64))
+		binary.Write(tl.tokens, binary.LittleEndian, val)
+	}
 }
 
 // EncodeLoc stores the location of this token as a delta from the
@@ -48,24 +68,15 @@ func (tl *TokenList) AddString(pos SrcLoc, token int, str string) {
 // column is stored and then the number of lines to advance is stored.
 func (tl *TokenList) EncodeLoc(pos SrcLoc) {
 	if tl.last.Line == pos.Line {
+		// it's on the same line so just output a delta for the column
 		tl.EncodeInt64(int64(pos.Column - tl.last.Column)) // positive
 		tl.last.Column = pos.Column
 	} else {
+		// new line so encode a delta for the line and an absolute column
 		tl.EncodeInt64(-int64(pos.Column)) // negative
 		tl.EncodeUint64(uint64(pos.Line - tl.last.Line))
 		tl.last = pos
 	}
-}
-
-// EncodeString encodes a unicode string. It firstly stores the byte
-// length of the string using EncodeUint64, then stores the contents of
-// the string.
-func (tl *TokenList) EncodeString(str string) {
-	// encode the string length
-	tl.EncodeUint64(uint64(len(str)))
-
-	// add the string at the end
-	tl.tokens = append(tl.tokens, []byte(str)...)
 }
 
 // EncodeInt64 encodes a signed number using a variable precision method.
@@ -93,50 +104,16 @@ func (tl *TokenList) EncodeInt64(val int64) {
 //  value >= 0x100000000 are stored as flag 0xff and a 64 bit little endian
 //     value.
 func (tl *TokenList) EncodeUint64(val uint64) {
-	// output a size flag if we need to
-	if val >= TokenFlagInt16 {
-		if val < 0x10000 {
-			tl.EncodeByte(TokenFlagInt16)
-		} else if val < 0x100000000 {
-			tl.EncodeByte(TokenFlagInt32)
-		} else {
-			tl.EncodeByte(TokenFlagInt64)
-		}
+	if val < TokenFlagInt16 {
+		binary.Write(tl.tokens, binary.LittleEndian, byte(val))
+	} else if val < 0x10000 {
+		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt16))
+		binary.Write(tl.tokens, binary.LittleEndian, uint16(val))
+	} else if val < 0x100000000 {
+		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt32))
+		binary.Write(tl.tokens, binary.LittleEndian, uint32(val))
+	} else {
+		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt64))
+		binary.Write(tl.tokens, binary.LittleEndian, val)
 	}
-
-	// output the value
-	tl.EncodeByte(byte(val))
-	if val >= TokenFlagInt16 {
-		tl.EncodeByte(byte(val >> 8))
-		if val > 0x10000 {
-			tl.EncodeByte(byte(val >> 16))
-			tl.EncodeByte(byte(val >> 24))
-			if val > 0x100000000 {
-				tl.EncodeByte(byte(val >> 32))
-				tl.EncodeByte(byte(val >> 40))
-				tl.EncodeByte(byte(val >> 48))
-				tl.EncodeByte(byte(val >> 56))
-			}
-		}
-	}
-}
-
-// EncodeByte adds a byte to the token buffer
-func (tl *TokenList) EncodeByte(val byte) {
-	if len(tl.tokens) >= cap(tl.tokens) {
-		// increase the space available
-		newTokens := make([]byte, len(tl.tokens), cap(tl.tokens)*2)
-		copy(newTokens, tl.tokens)
-		tl.tokens = newTokens
-	}
-
-	// add the byte
-	tl.tokens = append(tl.tokens, val)
-}
-
-// Compact reduces the memory used by the token buffer to avoid wastage
-func (tl *TokenList) Compact() {
-	newTokens := make([]byte, len(tl.tokens))
-	copy(newTokens, tl.tokens)
-	tl.tokens = newTokens
 }
