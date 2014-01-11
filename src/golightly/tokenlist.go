@@ -3,28 +3,40 @@ package golightly
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 )
 
 // an encoded, compact form of the tokens
 type TokenList struct {
 	last   SrcLoc
 	tokens *bytes.Buffer
-	reader *Reader
+	symbols []string
+	reader io.Reader
+
+	// temporary storage used while tokenising the program
+	symMap map[string]int32
+
+	// literal values associated with a token
 	strVal string
 	intVal int64
 	uintVal uint64
-
+	floatVal float64
 }
 
 const TokenFlagInt16 = 0xfd
 const TokenFlagInt32 = 0xfe
 const TokenFlagInt64 = 0xff
 
+const tokenListInitialSymbols = 32
+
 func NewTokenList(filename string) *TokenList {
 	tl := new(TokenList)
 	tl.last.Line = 1
-	tl.last.Column = 1
+	tl.last.Column = 0
 	tl.tokens = new(bytes.Buffer)
+	tl.symbols = make([]string, 0, tokenListInitialSymbols)
+
+	tl.symMap = make(map[string]int32)
 
 	return tl
 }
@@ -49,7 +61,17 @@ func (tl *TokenList) AddUInt(pos SrcLoc, token Token, val uint64) {
 func (tl *TokenList) AddString(pos SrcLoc, token Token, str string) {
 	tl.EncodeLoc(pos)
 	tl.tokens.WriteByte(byte(token))
-	tl.tokens.WriteString(str)
+
+	// put the symbol in the symbol slice
+	off32, ok := tl.symMap[str]
+	offset := int(off32)
+	if !ok {
+		offset = len(tl.symMap)
+		tl.symMap[str] = int32(offset)
+		tl.symbols[offset] = str
+	}
+
+	tl.EncodeUint64(uint64(offset))
 }
 
 func (tl *TokenList) AddFloat(pos SrcLoc, val float64) {
@@ -84,6 +106,19 @@ func (tl *TokenList) EncodeLoc(pos SrcLoc) {
 	}
 }
 
+// DecodeLoc decodes a SrcLoc encoded as described above.
+func (tl *TokenList) DecodeLoc() SrcLoc {
+	v1 := tl.DecodeInt64()
+	if v1 >= 0 {
+		tl.last.Column += int(v1)
+	} else {
+		tl.last.Column = -int(v1)
+		tl.last.Line += int(tl.DecodeUint64())
+	}
+
+	return tl.last
+}
+
 // EncodeInt64 encodes a signed number using a variable precision method.
 // The LSB being set indicates a negative number.
 //  positive values are shifted left one bit and encoded using EncodeUint64.
@@ -97,6 +132,18 @@ func (tl *TokenList) EncodeInt64(val int64) {
 	} else {
 		// positive number
 		tl.EncodeUint64(uint64(val << 1))
+	}
+}
+
+// DecodeInt64 decodes a number encoded as described above.
+func (tl *TokenList) DecodeInt64() int64 {
+	val := tl.DecodeUint64()
+	if val & 0x01 != 0 {
+		// negative
+		return int64((val >> 1) ^ 0x7fffffffffffffff)
+	} else {
+		// positive
+		return int64(val >> 1)
 	}
 }
 
@@ -123,39 +170,109 @@ func (tl *TokenList) EncodeUint64(val uint64) {
 	}
 }
 
+// DecodeUint64 decodes a number encoded as described above.
+func (tl *TokenList) DecodeUint64() uint64 {
+	var b byte
+	err := binary.Read(tl.reader, binary.LittleEndian, &b)
+	if err != nil {
+		return 0
+	}
 
-func (tl *TokenList) StartReading() {
-	tl.reader = bytes.NewReader(tl.tokens.Bytes())
+	if b < TokenFlagInt16 {
+		return uint64(b)
+	}
+
+	var result uint64
+	switch b {
+	case TokenFlagInt16:
+		var val uint16
+		err = binary.Read(tl.reader, binary.LittleEndian, &val)
+		result = uint64(val)
+
+	case TokenFlagInt32:
+		var val uint32
+		err = binary.Read(tl.reader, binary.LittleEndian, &val)
+		result = uint64(val)
+
+	case TokenFlagInt64:
+		err = binary.Read(tl.reader, binary.LittleEndian, &result)
+	}
+
+	if err != nil {
+		return 0
+	}
+
+	return result
 }
 
+// StartReading resets the read position to the start of the TokenList.
+// This should be called before using GetToken, and called again to re-read
+// the tokens.
+func (tl *TokenList) StartReading() {
+	tl.reader = bytes.NewReader(tl.tokens.Bytes())
+	tl.last.Line = 1
+	tl.last.Column = 0
+}
+
+// GetToken gets a single token from the TokenList. It returns
+// TokenEndOfSource at the end. Some tokens have associated literal values
+// which can be retrieved using GetValueXXX. The location of the token in
+// the source code is set in <loc>.
 func (tl *TokenList) GetToken(loc *SrcLoc) Token {
-	tl.DecodeLoc(loc)
-	b, err := tl.reader.ReadByte()
+	*loc = tl.DecodeLoc()
+	var b byte
+	err := binary.Read(tl.reader, binary.LittleEndian, &b)
 	if err != nil {
 		return TokenEndOfSource
 	}
 
 	token := Token(b)
-	if b < int(TokenString) {
+	if b < byte(TokenString) {
 		// keywords and operators have no value
 		return token
 	} else {
 		switch token {
 		// literals
-		case TokenString:
-			strLen, err := tl.DecodeUint64()
-			buf := make([]byte, strLen)
+		case TokenString, TokenIdentifier:
+			symIndex := int(tl.DecodeUint64())
+			if symIndex >= len(tl.symbols) {
+				return TokenEndOfSource
+			}
+			tl.strVal = tl.symbols[symIndex]
 
-			return token
+		case TokenRune, TokenUint:
+			tl.uintVal = tl.DecodeUint64()
 
-		case TokenRune
-		case TokenInt
-		case TokenUint
-		case TokenFloat32
-		case TokenFloat64
+		case TokenInt:
+			tl.intVal = tl.DecodeInt64()
 
-		// identifiers
-		case TokenIdentifier
+		case TokenFloat32:
+			var val float32
+			err = binary.Read(tl.reader, binary.LittleEndian, &val)
+			tl.floatVal = float64(val)
 
+		case TokenFloat64:
+			err = binary.Read(tl.reader, binary.LittleEndian, &tl.floatVal)
+		}
 	}
+
+	if err != nil {
+		return TokenEndOfSource
+	}
+
+	return token
+}
+
+// GetValueString is used to get a string value associated with tokens
+// TokenString and TokenIdentifier.
+func (tl *TokenList) GetValueString() string {
+	return tl.strVal
+}
+
+func (tl *TokenList) GetValueInt64() int64 {
+	return tl.intVal
+}
+
+func (tl *TokenList) GetValueFloat64() float64 {
+	return tl.floatVal
 }
