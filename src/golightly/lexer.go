@@ -1,16 +1,17 @@
 package golightly
 
 import (
+	"bufio"
 	"errors"
 	"io"
-	"unicode"
-	"strconv"
 	"os"
-	"bufio"
+	"strconv"
+	"unicode"
 )
 
 // tokens indicate which type of symbol this lexical item is
 type Token int
+
 const (
 	// operators
 	TokenAdd Token = iota
@@ -292,69 +293,69 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 	switch ch {
 	case '+':
 		switch ch2 {
-		case '=':  // '+='
+		case '=': // '+='
 			return TokenAddAssign, 2, true
-		case '+':  // '++'
+		case '+': // '++'
 			return TokenIncrement, 2, true
-		default:   // '+'
+		default: // '+'
 			return TokenAdd, 1, true
 		}
 
 	case '-':
 		switch ch2 {
-		case '=':  // '-='
+		case '=': // '-='
 			return TokenSubtractAssign, 2, true
-		case '-':  // '--'
+		case '-': // '--'
 			return TokenDecrement, 2, true
-		default:   // '-'
+		default: // '-'
 			return TokenSubtract, 1, true
 		}
 
 	case '*':
-		if ch2 == '=' {  // '*='
+		if ch2 == '=' { // '*='
 			return TokenMultiplyAssign, 2, true
-		} else {  // '*'
+		} else { // '*'
 			return TokenMultiply, 1, true
 		}
 
 	case '/':
-		if ch2 == '=' {  // '/='
+		if ch2 == '=' { // '/='
 			return TokenDivideAssign, 2, true
-		} else {  // '/'
+		} else { // '/'
 			return TokenDivide, 1, true
 		}
 
 	case '%':
-		if ch2 == '=' {  // '%='
+		if ch2 == '=' { // '%='
 			return TokenModulusAssign, 2, true
-		} else {  // '%'
+		} else { // '%'
 			return TokenModulus, 1, true
 		}
 
 	case '&':
 		switch ch2 {
-		case '=':  // '&='
+		case '=': // '&='
 			return TokenBitwiseAndAssign, 2, true
-		case '&':  // '&&'
+		case '&': // '&&'
 			return TokenLogicalAnd, 2, true
-		default:   // '&'
+		default: // '&'
 			return TokenBitwiseAnd, 1, true
 		}
 
 	case '|':
 		switch ch2 {
-		case '=':  // '|='
+		case '=': // '|='
 			return TokenBitwiseOrAssign, 2, true
-		case '|':  // '||'
+		case '|': // '||'
 			return TokenLogicalOr, 2, true
-		default:   // '|'
+		default: // '|'
 			return TokenBitwiseOr, 1, true
 		}
 
 	case '^':
-		if ch2 == '=' {  // '^='
+		if ch2 == '=' { // '^='
 			return TokenBitwiseExorAssign, 2, true
-		} else {  // '^'
+		} else { // '^'
 			return TokenBitwiseExor, 1, true
 		}
 
@@ -367,16 +368,16 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 				ch3 = l.lineBuf[l.pos.Column+2]
 			}
 
-			if ch3 == '=' {  // '<<='
+			if ch3 == '=' { // '<<='
 				return TokenShiftLeftAssign, 3, true
-			} else {  // '<<'
+			} else { // '<<'
 				return TokenShiftLeft, 2, true
 			}
-		case '=':  // '<='
+		case '=': // '<='
 			return TokenLessEqual, 2, true
-		case '-':  // '<-'
+		case '-': // '<-'
 			return TokenChannelArrow, 2, true
-		default:  // '<'
+		default: // '<'
 			return TokenLess, 1, true
 		}
 
@@ -389,53 +390,53 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 				ch3 = l.lineBuf[l.pos.Column+2]
 			}
 
-			if ch3 == '=' {  // '>>='
+			if ch3 == '=' { // '>>='
 				return TokenShiftRightAssign, 3, true
-			} else {  // '>>'
+			} else { // '>>'
 				return TokenShiftRight, 2, true
 			}
-		case '=':  // '>='
+		case '=': // '>='
 			return TokenGreaterEqual, 2, true
-		default:  // '>'
+		default: // '>'
 			return TokenGreater, 1, true
 		}
 
 	case '=':
-		if ch2 == '=' {  // '=='
+		if ch2 == '=' { // '=='
 			return TokenEquals, 2, true
-		} else {  // '='
+		} else { // '='
 			return TokenAssign, 1, true
 		}
 
 	case '!':
-		if ch2 == '=' {  // '!='
+		if ch2 == '=' { // '!='
 			return TokenNotEqual, 2, true
-		} else {  // '!'
+		} else { // '!'
 			return TokenNot, 1, true
 		}
 
 	case ':':
-		if ch2 == '=' {  // ':='
+		if ch2 == '=' { // ':='
 			return TokenDeclareAssign, 2, true
-		} else {  // ':'
+		} else { // ':'
 			return TokenColon, 1, true
 		}
 
-	case '.':  // '.'
+	case '.': // '.'
 		return TokenDot, 1, true
-	case ',':  // ','
+	case ',': // ','
 		return TokenComma, 1, true
-	case '(':  // '('
+	case '(': // '('
 		return TokenOpenGroup, 1, true
-	case ')':  // ')'
+	case ')': // ')'
 		return TokenCloseGroup, 1, true
-	case '[':  // '['
+	case '[': // '['
 		return TokenOpenOption, 1, true
-	case ']':  // ']'
+	case ']': // ']'
 		return TokenCloseOption, 1, true
-	case '{':  // '{'
+	case '{': // '{'
 		return TokenOpenBlock, 1, true
-	case '}':  // '}'
+	case '}': // '}'
 		return TokenCloseBlock, 1, true
 	}
 

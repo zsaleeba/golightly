@@ -8,18 +8,18 @@ import (
 
 // an encoded, compact form of the tokens
 type TokenList struct {
-	last   SrcLoc
-	tokens *bytes.Buffer
+	last    SrcLoc
+	tokens  *bytes.Buffer
 	symbols []string
-	reader io.Reader
+	reader  io.Reader
 
 	// temporary storage used while tokenising the program
 	symMap map[string]int32
 
 	// literal values associated with a token
-	strVal string
-	intVal int64
-	uintVal uint64
+	strVal   string
+	intVal   int64
+	uintVal  uint64
 	floatVal float64
 }
 
@@ -28,6 +28,8 @@ const TokenFlagInt32 = 0xfe
 const TokenFlagInt64 = 0xff
 
 const tokenListInitialSymbols = 32
+
+const endian = binary.LittleEndian
 
 func NewTokenList(filename string) *TokenList {
 	tl := new(TokenList)
@@ -80,11 +82,11 @@ func (tl *TokenList) AddFloat(pos SrcLoc, val float64) {
 	if float64(v32) == val {
 		// can be represented as a float32
 		tl.tokens.WriteByte(byte(TokenFloat32))
-		binary.Write(tl.tokens, binary.LittleEndian, v32)
+		binary.Write(tl.tokens, endian, v32)
 	} else {
 		// we need the full 64 bits
 		tl.tokens.WriteByte(byte(TokenFloat64))
-		binary.Write(tl.tokens, binary.LittleEndian, val)
+		binary.Write(tl.tokens, endian, val)
 	}
 }
 
@@ -138,7 +140,7 @@ func (tl *TokenList) EncodeInt64(val int64) {
 // DecodeInt64 decodes a number encoded as described above.
 func (tl *TokenList) DecodeInt64() int64 {
 	val := tl.DecodeUint64()
-	if val & 0x01 != 0 {
+	if val&0x01 != 0 {
 		// negative
 		return int64((val >> 1) ^ 0x7fffffffffffffff)
 	} else {
@@ -157,23 +159,23 @@ func (tl *TokenList) DecodeInt64() int64 {
 //     value.
 func (tl *TokenList) EncodeUint64(val uint64) {
 	if val < TokenFlagInt16 {
-		binary.Write(tl.tokens, binary.LittleEndian, byte(val))
+		binary.Write(tl.tokens, endian, byte(val))
 	} else if val < 0x10000 {
-		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt16))
-		binary.Write(tl.tokens, binary.LittleEndian, uint16(val))
+		binary.Write(tl.tokens, endian, byte(TokenFlagInt16))
+		binary.Write(tl.tokens, endian, uint16(val))
 	} else if val < 0x100000000 {
-		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt32))
-		binary.Write(tl.tokens, binary.LittleEndian, uint32(val))
+		binary.Write(tl.tokens, endian, byte(TokenFlagInt32))
+		binary.Write(tl.tokens, endian, uint32(val))
 	} else {
-		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt64))
-		binary.Write(tl.tokens, binary.LittleEndian, val)
+		binary.Write(tl.tokens, endian, byte(TokenFlagInt64))
+		binary.Write(tl.tokens, endian, val)
 	}
 }
 
 // DecodeUint64 decodes a number encoded as described above.
 func (tl *TokenList) DecodeUint64() uint64 {
 	var b byte
-	err := binary.Read(tl.reader, binary.LittleEndian, &b)
+	err := binary.Read(tl.reader, endian, &b)
 	if err != nil {
 		return 0
 	}
@@ -186,16 +188,16 @@ func (tl *TokenList) DecodeUint64() uint64 {
 	switch b {
 	case TokenFlagInt16:
 		var val uint16
-		err = binary.Read(tl.reader, binary.LittleEndian, &val)
+		err = binary.Read(tl.reader, endian, &val)
 		result = uint64(val)
 
 	case TokenFlagInt32:
 		var val uint32
-		err = binary.Read(tl.reader, binary.LittleEndian, &val)
+		err = binary.Read(tl.reader, endian, &val)
 		result = uint64(val)
 
 	case TokenFlagInt64:
-		err = binary.Read(tl.reader, binary.LittleEndian, &result)
+		err = binary.Read(tl.reader, endian, &result)
 	}
 
 	if err != nil {
@@ -221,7 +223,7 @@ func (tl *TokenList) StartReading() {
 func (tl *TokenList) GetToken(loc *SrcLoc) Token {
 	*loc = tl.DecodeLoc()
 	var b byte
-	err := binary.Read(tl.reader, binary.LittleEndian, &b)
+	err := binary.Read(tl.reader, endian, &b)
 	if err != nil {
 		return TokenEndOfSource
 	}
@@ -248,11 +250,11 @@ func (tl *TokenList) GetToken(loc *SrcLoc) Token {
 
 		case TokenFloat32:
 			var val float32
-			err = binary.Read(tl.reader, binary.LittleEndian, &val)
+			err = binary.Read(tl.reader, endian, &val)
 			tl.floatVal = float64(val)
 
 		case TokenFloat64:
-			err = binary.Read(tl.reader, binary.LittleEndian, &tl.floatVal)
+			err = binary.Read(tl.reader, endian, &tl.floatVal)
 		}
 	}
 
