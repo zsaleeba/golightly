@@ -9,6 +9,11 @@ import (
 type TokenList struct {
 	last   SrcLoc
 	tokens *bytes.Buffer
+	reader *Reader
+	strVal string
+	intVal int64
+	uintVal uint64
+
 }
 
 const TokenFlagInt16 = 0xfd
@@ -26,25 +31,25 @@ func NewTokenList(filename string) *TokenList {
 
 func (tl *TokenList) Add(pos SrcLoc, token Token) {
 	tl.EncodeLoc(pos)
-	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
+	tl.tokens.WriteByte(byte(token))
 }
 
 func (tl *TokenList) AddInt(pos SrcLoc, token Token, val int64) {
 	tl.EncodeLoc(pos)
-	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
+	tl.tokens.WriteByte(byte(token))
 	tl.EncodeInt64(val)
 }
 
 func (tl *TokenList) AddUInt(pos SrcLoc, token Token, val uint64) {
 	tl.EncodeLoc(pos)
-	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
+	tl.tokens.WriteByte(byte(token))
 	tl.EncodeUint64(val)
 }
 
 func (tl *TokenList) AddString(pos SrcLoc, token Token, str string) {
 	tl.EncodeLoc(pos)
-	binary.Write(tl.tokens, binary.LittleEndian, byte(token))
-	binary.Write(tl.tokens, binary.LittleEndian, str)
+	tl.tokens.WriteByte(byte(token))
+	tl.tokens.WriteString(str)
 }
 
 func (tl *TokenList) AddFloat(pos SrcLoc, val float64) {
@@ -52,11 +57,11 @@ func (tl *TokenList) AddFloat(pos SrcLoc, val float64) {
 	v32 := float32(val)
 	if float64(v32) == val {
 		// can be represented as a float32
-		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFloat32))
+		tl.tokens.WriteByte(byte(TokenFloat32))
 		binary.Write(tl.tokens, binary.LittleEndian, v32)
 	} else {
 		// we need the full 64 bits
-		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFloat64))
+		tl.tokens.WriteByte(byte(TokenFloat64))
 		binary.Write(tl.tokens, binary.LittleEndian, val)
 	}
 }
@@ -115,5 +120,42 @@ func (tl *TokenList) EncodeUint64(val uint64) {
 	} else {
 		binary.Write(tl.tokens, binary.LittleEndian, byte(TokenFlagInt64))
 		binary.Write(tl.tokens, binary.LittleEndian, val)
+	}
+}
+
+
+func (tl *TokenList) StartReading() {
+	tl.reader = bytes.NewReader(tl.tokens.Bytes())
+}
+
+func (tl *TokenList) GetToken(loc *SrcLoc) Token {
+	tl.DecodeLoc(loc)
+	b, err := tl.reader.ReadByte()
+	if err != nil {
+		return TokenEndOfSource
+	}
+
+	token := Token(b)
+	if b < int(TokenString) {
+		// keywords and operators have no value
+		return token
+	} else {
+		switch token {
+		// literals
+		case TokenString:
+			strLen, err := tl.DecodeUint64()
+			buf := make([]byte, strLen)
+
+			return token
+
+		case TokenRune
+		case TokenInt
+		case TokenUint
+		case TokenFloat32
+		case TokenFloat64
+
+		// identifiers
+		case TokenIdentifier
+
 	}
 }

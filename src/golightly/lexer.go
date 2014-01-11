@@ -98,6 +98,9 @@ const (
 
 	// identifiers
 	TokenIdentifier
+
+	// end of source code
+	TokenEndOfSource
 )
 
 // a map of keywords for quick lookup
