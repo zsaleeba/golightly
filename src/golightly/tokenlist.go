@@ -29,7 +29,7 @@ const TokenFlagInt64 = 0xff
 
 const tokenListInitialSymbols = 32
 
-const endian = binary.LittleEndian
+var endian = binary.LittleEndian
 
 func NewTokenList(filename string) *TokenList {
 	tl := new(TokenList)
@@ -273,6 +273,10 @@ func (tl *TokenList) GetValueString() string {
 
 func (tl *TokenList) GetValueInt64() int64 {
 	return tl.intVal
+}
+
+func (tl *TokenList) GetValueUint64() uint64 {
+	return tl.uintVal
 }
 
 func (tl *TokenList) GetValueFloat64() float64 {
