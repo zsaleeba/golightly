@@ -143,6 +143,11 @@ type Lexer struct {
 	tokens *TokenList // the compact encoded token list
 }
 
+// NewLexer creates a new lexer object
+func NewLexer() *Lexer {
+	return new(Lexer)
+}
+
 // LexLine lexes a line of source code and adds the tokens to the end of
 // the lexed token list. The provided source should end on a line
 // boundary so there are no split tokens at the end.
@@ -152,9 +157,7 @@ func (l *Lexer) LexLine(src string) error {
 	l.pos.Column = 1
 
 	// since columns are 1-based we add a spurious character at the start so lineBuf[1] is the first character
-	srcRunes := []rune(src)
-	l.lineBuf = make([]rune, len(srcRunes)+1)
-	copy(l.lineBuf[1:], srcRunes)
+	l.lineBuf = []rune(" " + src)
 
 	// get tokens until end of line
 	ok := true
@@ -170,11 +173,12 @@ func (l *Lexer) LexLine(src string) error {
 }
 
 // LexReader reads all input from a Reader and lexes it until EOF.
-func (l *Lexer) LexReader(r io.Reader) error {
+func (l *Lexer) LexReader(r io.Reader, filename string) error {
 	// start afresh
 	l.pos.Line = 1
 	l.pos.Column = 1
 	l.startPos = l.pos
+	l.sourceFile = filename
 	l.tokens = NewTokenList(l.sourceFile)
 
 	// get lines until EOF
@@ -182,7 +186,7 @@ func (l *Lexer) LexReader(r io.Reader) error {
 	var err error
 	for scanner.Scan() {
 		// get the line
-		l.lineBuf = []rune(scanner.Text())
+		l.lineBuf = []rune(" " + scanner.Text())
 
 		// tokenise the line
 		var ok bool
@@ -209,11 +213,10 @@ func (l *Lexer) LexFile(filename string) error {
 
 	defer inFile.Close()
 
-	l.sourceFile = filename
 	reader := bufio.NewReader(inFile)
 
 	// now lex it
-	return l.LexReader(reader)
+	return l.LexReader(reader, filename)
 }
 
 // getToken gets the next token from the line buffer.
@@ -221,7 +224,7 @@ func (l *Lexer) LexFile(filename string) error {
 // returns success and an error. success is false at end of line.
 func (l *Lexer) getToken() (bool, error) {
 	// are there any characters left?
-	if l.pos.Column >= len(l.lineBuf) {
+	if l.pos.Column > len(l.lineBuf) {
 		return false, nil
 	}
 
@@ -229,7 +232,7 @@ func (l *Lexer) getToken() (bool, error) {
 	ch := l.lineBuf[l.pos.Column]
 	for ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
 		l.pos.Column++
-		if l.pos.Column >= len(l.lineBuf) {
+		if l.pos.Column > len(l.lineBuf) {
 			return false, nil // end of line
 		}
 		ch = l.lineBuf[l.pos.Column]
@@ -256,7 +259,7 @@ func (l *Lexer) getToken() (bool, error) {
 
 	// is it a numeric literal?
 	var ch2 rune
-	if l.pos.Column+1 <= len(l.lineBuf) {
+	if l.pos.Column+1 < len(l.lineBuf) {
 		ch2 = l.lineBuf[l.pos.Column+1]
 	}
 
@@ -368,7 +371,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 		case '<':
 			// look ahead another character
 			var ch3 rune
-			if l.pos.Column+2 <= len(l.lineBuf) {
+			if l.pos.Column+2 < len(l.lineBuf) {
 				ch3 = l.lineBuf[l.pos.Column+2]
 			}
 
@@ -390,7 +393,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 		case '>':
 			// look ahead another character
 			var ch3 rune
-			if l.pos.Column+2 <= len(l.lineBuf) {
+			if l.pos.Column+2 < len(l.lineBuf) {
 				ch3 = l.lineBuf[l.pos.Column+2]
 			}
 
@@ -450,7 +453,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 // getWord gets an identifier. returns the word.
 func (l *Lexer) getWord() string {
 	// get character until end of line
-	for ; l.pos.Column <= len(l.lineBuf); l.pos.Column++ {
+	for ; l.pos.Column < len(l.lineBuf); l.pos.Column++ {
 		ch := l.lineBuf[l.pos.Column]
 
 		// done at end of word
@@ -468,13 +471,13 @@ func (l *Lexer) getWord() string {
 func (l *Lexer) getNumeric() error {
 	// scan for a non-digit character
 	var col int
-	for col = l.pos.Column; col <= len(l.lineBuf) && unicode.IsDigit(l.lineBuf[col-1]); col++ {
+	for col = l.pos.Column; col < len(l.lineBuf) && unicode.IsDigit(l.lineBuf[col-1]); col++ {
 	}
 
 	// is the next character a "." or "e"? If so, it's a float.
 	if col >= len(l.lineBuf) && (l.lineBuf[col-1] == '.' || l.lineBuf[col-1] == 'e') {
 		// it's a float, scan for the end
-		for col = l.pos.Column; col <= len(l.lineBuf) && (unicode.IsDigit(l.lineBuf[col]) || l.lineBuf[col] == '.' || l.lineBuf[col] == 'e'); col++ {
+		for col = l.pos.Column; col < len(l.lineBuf) && (unicode.IsDigit(l.lineBuf[col]) || l.lineBuf[col] == '.' || l.lineBuf[col] == 'e'); col++ {
 		}
 
 		// parse the float
