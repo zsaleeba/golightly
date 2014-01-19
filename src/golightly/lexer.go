@@ -148,13 +148,24 @@ func NewLexer() *Lexer {
 	return new(Lexer)
 }
 
+// Init initialises the lexer before using LexLine.
+func (l *Lexer) Init(filename string) {
+	l.pos.Line = 1
+	l.pos.Column = 1
+	l.startPos = l.pos
+	l.sourceFile = filename
+	l.tokens = NewTokenList(l.sourceFile)
+}
+
 // LexLine lexes a line of source code and adds the tokens to the end of
 // the lexed token list. The provided source should end on a line
 // boundary so there are no split tokens at the end.
 func (l *Lexer) LexLine(src string) error {
 	// prepare for this line
-	l.pos.Line++
-	l.pos.Column = 1
+	defer func() {
+		l.pos.Column = 1
+		l.pos.Line++
+	}()
 
 	// since columns are 1-based we add a spurious character at the start so lineBuf[1] is the first character
 	l.lineBuf = []rune(" " + src)
@@ -224,7 +235,7 @@ func (l *Lexer) LexFile(filename string) error {
 // returns success and an error. success is false at end of line.
 func (l *Lexer) getToken() (bool, error) {
 	// are there any characters left?
-	if l.pos.Column > len(l.lineBuf) {
+	if l.pos.Column >= len(l.lineBuf) {
 		return false, nil
 	}
 
@@ -471,11 +482,11 @@ func (l *Lexer) getWord() string {
 func (l *Lexer) getNumeric() error {
 	// scan for a non-digit character
 	var col int
-	for col = l.pos.Column; col < len(l.lineBuf) && unicode.IsDigit(l.lineBuf[col-1]); col++ {
+	for col = l.pos.Column; col < len(l.lineBuf) && unicode.IsDigit(l.lineBuf[col]); col++ {
 	}
 
 	// is the next character a "." or "e"? If so, it's a float.
-	if col >= len(l.lineBuf) && (l.lineBuf[col-1] == '.' || l.lineBuf[col-1] == 'e') {
+	if col < len(l.lineBuf) && (l.lineBuf[col] == '.' || l.lineBuf[col] == 'e') {
 		// it's a float, scan for the end
 		for col = l.pos.Column; col < len(l.lineBuf) && (unicode.IsDigit(l.lineBuf[col]) || l.lineBuf[col] == '.' || l.lineBuf[col] == 'e'); col++ {
 		}
@@ -523,7 +534,7 @@ func (l *Lexer) getStringLiteral(raw bool) error {
 		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '`'; col++ {
 		}
 	} else {
-		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '\''; col++ {
+		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '"'; col++ {
 		}
 	}
 

@@ -15,7 +15,7 @@ func TestTokenList(t *testing.T) {
 	tl.AddString(SrcLoc{1, 9}, TokenIdentifier, "golightly")
 	tl.Add(SrcLoc{3, 1}, TokenImport)
 	tl.Add(SrcLoc{3, 8}, TokenOpenGroup)
-	tl.AddString(SrcLoc{4, 5}, TokenIdentifier, "testing")
+	tl.AddString(SrcLoc{4, 5}, TokenString, "testing")
 	tl.Add(SrcLoc{5, 1}, TokenCloseGroup)
 	tl.AddString(SrcLoc{7, 1}, TokenIdentifier, "i")
 	tl.Add(SrcLoc{7, 3}, TokenDeclareAssign)
@@ -49,7 +49,7 @@ func TestTokenList(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenString(tl, 4, 5, TokenIdentifier, "testing")
+	err = checkTokenString(tl, 4, 5, TokenString, "testing")
 	if err != nil {
 		t.Error(err)
 	}
@@ -106,8 +106,7 @@ func TestTokenList(t *testing.T) {
 }
 
 func checkToken(tl *TokenList, line int, column int, tok Token) error {
-	var loc SrcLoc
-	foundToken := tl.GetToken(&loc)
+	foundToken, loc := tl.GetToken()
 	if foundToken != tok {
 		return errors.New(fmt.Sprint("wrong token: ", foundToken, " != ", tok))
 	}

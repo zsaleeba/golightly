@@ -220,25 +220,28 @@ func (tl *TokenList) StartReading() {
 // TokenEndOfSource at the end. Some tokens have associated literal values
 // which can be retrieved using GetValueXXX. The location of the token in
 // the source code is set in <loc>.
-func (tl *TokenList) GetToken(loc *SrcLoc) Token {
-	*loc = tl.DecodeLoc()
+func (tl *TokenList) GetToken() (Token, SrcLoc) {
+	// get the source location
+	loc := tl.DecodeLoc()
+
+	// get the token byte
 	var b byte
 	err := binary.Read(tl.reader, endian, &b)
 	if err != nil {
-		return TokenEndOfSource
+		return TokenEndOfSource, loc
 	}
 
 	token := Token(b)
 	if b < byte(TokenString) {
 		// keywords and operators have no value
-		return token
+		return token, loc
 	} else {
 		switch token {
 		// literals
 		case TokenString, TokenIdentifier:
 			symIndex := int(tl.DecodeUint64())
 			if symIndex >= len(tl.symbols) {
-				return TokenEndOfSource
+				return TokenEndOfSource, loc
 			}
 			tl.strVal = tl.symbols[symIndex]
 
@@ -259,10 +262,10 @@ func (tl *TokenList) GetToken(loc *SrcLoc) Token {
 	}
 
 	if err != nil {
-		return TokenEndOfSource
+		return TokenEndOfSource, loc
 	}
 
-	return token
+	return token, loc
 }
 
 // GetValueString is used to get a string value associated with tokens
