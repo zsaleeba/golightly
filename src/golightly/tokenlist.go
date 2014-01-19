@@ -14,7 +14,7 @@ type TokenList struct {
 	reader  io.Reader
 
 	// temporary storage used while tokenising the program
-	symMap map[string]int32
+	symMap map[string]int
 
 	// literal values associated with a token
 	strVal   string
@@ -34,11 +34,11 @@ var endian = binary.LittleEndian
 func NewTokenList(filename string) *TokenList {
 	tl := new(TokenList)
 	tl.last.Line = 1
-	tl.last.Column = 0
+	tl.last.Column = 1
 	tl.tokens = new(bytes.Buffer)
 	tl.symbols = make([]string, 0, tokenListInitialSymbols)
 
-	tl.symMap = make(map[string]int32)
+	tl.symMap = make(map[string]int)
 
 	return tl
 }
@@ -65,12 +65,11 @@ func (tl *TokenList) AddString(pos SrcLoc, token Token, str string) {
 	tl.tokens.WriteByte(byte(token))
 
 	// put the symbol in the symbol slice
-	off32, ok := tl.symMap[str]
-	offset := int(off32)
+	offset, ok := tl.symMap[str]
 	if !ok {
 		offset = len(tl.symMap)
-		tl.symMap[str] = int32(offset)
-		tl.symbols[offset] = str
+		tl.symMap[str] = offset
+		tl.symbols = append(tl.symbols, str)
 	}
 
 	tl.EncodeUint64(uint64(offset))
@@ -115,7 +114,8 @@ func (tl *TokenList) DecodeLoc() SrcLoc {
 		tl.last.Column += int(v1)
 	} else {
 		tl.last.Column = -int(v1)
-		tl.last.Line += int(tl.DecodeUint64())
+		lineInc := tl.DecodeUint64()
+		tl.last.Line += int(lineInc)
 	}
 
 	return tl.last
@@ -142,7 +142,7 @@ func (tl *TokenList) DecodeInt64() int64 {
 	val := tl.DecodeUint64()
 	if val&0x01 != 0 {
 		// negative
-		return int64((val >> 1) ^ 0x7fffffffffffffff)
+		return int64((val >> 1) ^ 0xffffffffffffffff)
 	} else {
 		// positive
 		return int64(val >> 1)
@@ -213,7 +213,7 @@ func (tl *TokenList) DecodeUint64() uint64 {
 func (tl *TokenList) StartReading() {
 	tl.reader = bytes.NewReader(tl.tokens.Bytes())
 	tl.last.Line = 1
-	tl.last.Column = 0
+	tl.last.Column = 1
 }
 
 // GetToken gets a single token from the TokenList. It returns

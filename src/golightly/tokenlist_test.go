@@ -11,95 +11,95 @@ func TestTokenList(t *testing.T) {
 	tl := NewTokenList("-")
 
 	// add some tokens
-	tl.Add(SrcLoc{1, 0}, TokenPackage)
-	tl.AddString(SrcLoc{1, 8}, TokenIdentifier, "golightly")
-	tl.Add(SrcLoc{3, 0}, TokenImport)
-	tl.Add(SrcLoc{3, 7}, TokenOpenGroup)
-	tl.AddString(SrcLoc{4, 4}, TokenIdentifier, "testing")
-	tl.Add(SrcLoc{5, 0}, TokenCloseGroup)
-	tl.AddString(SrcLoc{7, 0}, TokenIdentifier, "i")
-	tl.Add(SrcLoc{7, 2}, TokenDeclareAssign)
-	tl.AddUInt(SrcLoc{7, 4}, TokenUint, 42)
-	tl.Add(SrcLoc{7, 6}, TokenSemicolon)
-	tl.AddString(SrcLoc{8, 0}, TokenIdentifier, "j")
-	tl.Add(SrcLoc{8, 2}, TokenDeclareAssign)
-	tl.AddFloat(SrcLoc{8, 4}, 7.2)
-	tl.Add(SrcLoc{8, 7}, TokenSemicolon)
+	tl.Add(SrcLoc{1, 1}, TokenPackage)
+	tl.AddString(SrcLoc{1, 9}, TokenIdentifier, "golightly")
+	tl.Add(SrcLoc{3, 1}, TokenImport)
+	tl.Add(SrcLoc{3, 8}, TokenOpenGroup)
+	tl.AddString(SrcLoc{4, 5}, TokenIdentifier, "testing")
+	tl.Add(SrcLoc{5, 1}, TokenCloseGroup)
+	tl.AddString(SrcLoc{7, 1}, TokenIdentifier, "i")
+	tl.Add(SrcLoc{7, 3}, TokenDeclareAssign)
+	tl.AddUInt(SrcLoc{7, 5}, TokenUint, 42)
+	tl.Add(SrcLoc{7, 7}, TokenSemicolon)
+	tl.AddString(SrcLoc{8, 1}, TokenIdentifier, "j")
+	tl.Add(SrcLoc{8, 3}, TokenDeclareAssign)
+	tl.AddFloat(SrcLoc{8, 5}, 7.2)
+	tl.Add(SrcLoc{8, 8}, TokenSemicolon)
 
 	// now try to get them back out
 	tl.StartReading()
 
-	err := checkToken(tl, 1, 0, TokenPackage)
+	err := checkToken(tl, 1, 1, TokenPackage)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkTokenString(tl, 1, 8, TokenIdentifier, "golightly")
+	err = checkTokenString(tl, 1, 9, TokenIdentifier, "golightly")
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 3, 0, TokenImport)
+	err = checkToken(tl, 3, 1, TokenImport)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 3, 7, TokenOpenGroup)
+	err = checkToken(tl, 3, 8, TokenOpenGroup)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkTokenString(tl, 4, 4, TokenIdentifier, "testing")
+	err = checkTokenString(tl, 4, 5, TokenIdentifier, "testing")
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 5, 0, TokenCloseGroup)
+	err = checkToken(tl, 5, 1, TokenCloseGroup)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkTokenString(tl, 7, 0, TokenIdentifier, "i")
+	err = checkTokenString(tl, 7, 1, TokenIdentifier, "i")
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 7, 2, TokenDeclareAssign)
+	err = checkToken(tl, 7, 3, TokenDeclareAssign)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkTokenUint(tl, 7, 4, TokenUint, 42)
+	err = checkTokenUint(tl, 7, 5, TokenUint, 42)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 7, 6, TokenSemicolon)
+	err = checkToken(tl, 7, 7, TokenSemicolon)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkTokenString(tl, 8, 0, TokenIdentifier, "i")
+	err = checkTokenString(tl, 8, 1, TokenIdentifier, "j")
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 8, 2, TokenDeclareAssign)
+	err = checkToken(tl, 8, 3, TokenDeclareAssign)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkTokenFloat(tl, 8, 4, TokenFloat32, 7.2)
+	err = checkTokenFloat(tl, 8, 5, TokenFloat64, 7.2)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 8, 6, TokenSemicolon)
+	err = checkToken(tl, 8, 8, TokenSemicolon)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 8, 7, TokenEndOfSource)
+	err = checkToken(tl, 8, 8, TokenEndOfSource)
 	if err != nil {
 		t.Error(err)
 	}
