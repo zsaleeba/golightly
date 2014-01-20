@@ -15,6 +15,7 @@ func TestLexerLexLine(t *testing.T) {
 	addLexLine(t, l, "")
 	addLexLine(t, l, "i := 42;")
 	addLexLine(t, l, "j := 7.2;")
+	addLexLine(t, l, "k += 'X';")
 
 	// now try to get them back out
 	tl := l.tokens
@@ -60,12 +61,12 @@ func TestLexerLexLine(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenUint(tl, 7, 5, TokenUint, 42)
+	err = checkTokenUint(tl, 7, 6, TokenUint, 42)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 7, 7, TokenSemicolon)
+	err = checkToken(tl, 7, 8, TokenSemicolon)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,21 +81,40 @@ func TestLexerLexLine(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenFloat(tl, 8, 5, TokenFloat64, 7.2)
+	err = checkTokenFloat(tl, 8, 6, TokenFloat64, 7.2)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 8, 8, TokenSemicolon)
+	err = checkToken(tl, 8, 9, TokenSemicolon)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 8, 8, TokenEndOfSource)
+	err = checkTokenString(tl, 9, 1, TokenIdentifier, "k")
 	if err != nil {
 		t.Error(err)
 	}
 
+	err = checkToken(tl, 9, 3, TokenAddAssign)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = checkTokenUint(tl, 9, 6, TokenRune, uint64('X'))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = checkToken(tl, 9, 9, TokenSemicolon)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = checkToken(tl, 10, 1, TokenEndOfSource)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func addLexLine(t *testing.T, l *Lexer, src string) {
@@ -178,8 +198,8 @@ func TestLexerGetNumericFloat(t *testing.T) {
 }
 
 func TestLexerGetRuneLiteral(t *testing.T) {
-	l := setupLexerTest("'")
-	err := l.getRuneLiteral('a')
+	l := setupLexerTest("'a'")
+	err := l.getRuneLiteral()
 	if err != nil {
 		t.Errorf("getRuneLiteral() failed: %s", err)
 	}
@@ -192,8 +212,8 @@ func TestLexerGetRuneLiteral(t *testing.T) {
 }
 
 func TestLexerGetStringLiteral(t *testing.T) {
-	l := setupLexerTest("hello\"")
-	err := l.getStringLiteral(false)
+	l := setupLexerTest("\"hello\"")
+	err := l.getStringLiteral()
 	if err != nil {
 		t.Errorf("getStringLiteral() failed: %s", err)
 	}
@@ -204,8 +224,8 @@ func TestLexerGetStringLiteral(t *testing.T) {
 		t.Error("getStringLiteral() failed")
 	}
 
-	l = setupLexerTest("hello`")
-	err = l.getStringLiteral(true)
+	l = setupLexerTest("`hello`")
+	err = l.getStringLiteral()
 	if err != nil {
 		t.Errorf("getStringLiteral() failed: %s", err)
 	}

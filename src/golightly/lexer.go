@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"unicode"
+	"fmt"
 )
 
 // tokens indicate which type of symbol this lexical item is
@@ -290,17 +291,15 @@ func (l *Lexer) getToken() (bool, error) {
 	// is it a string literal?
 	switch ch {
 	case '\'':
-		l.pos.Column += 2
-		err := l.getRuneLiteral(ch2)
-		return err != nil, err
+		err := l.getRuneLiteral()
+		return err == nil, err
 
 	case '"', '`':
-		l.pos.Column++
-		err := l.getStringLiteral(ch == '`')
-		return err != nil, err
+		err := l.getStringLiteral()
+		return err == nil, err
 	}
 
-	return false, nil
+	return false, errors.New(fmt.Sprintf("illegal character '%c' (0x%02x)", ch, ch))
 }
 
 // getOperator gets an operator token.
@@ -456,6 +455,8 @@ func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
 		return TokenOpenBlock, 1, true
 	case '}': // '}'
 		return TokenCloseBlock, 1, true
+	case ';': // ';'
+		return TokenSemicolon, 1, true
 	}
 
 	return 0, 0, false
@@ -493,55 +494,58 @@ func (l *Lexer) getNumeric() error {
 
 		// parse the float
 		v, err := strconv.ParseFloat(string(l.lineBuf[l.pos.Column:col]), 128)
-		l.pos.Column = col
 		if err != nil {
 			return err
 		}
 
-		l.tokens.AddFloat(l.pos, v)
+		l.tokens.AddFloat(l.startPos, v)
+		l.pos.Column = col
 		return nil
 	} else {
 		// it's an int, parse it
 		v, err := strconv.ParseUint(string(l.lineBuf[l.pos.Column:col]), 10, 64)
-		l.pos.Column = col
 		if err != nil {
 			return err
 		}
 
-		l.tokens.AddUInt(l.pos, TokenUint, v)
+		l.tokens.AddUInt(l.startPos, TokenUint, v)
+		l.pos.Column = col
 		return nil
 	}
 }
 
 // getRuneLiteral gets a single character rune literal.
 // XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
-func (l *Lexer) getRuneLiteral(ch rune) error {
-	l.tokens.AddUInt(l.pos, TokenRune, uint64(ch))
-	if l.lineBuf[l.pos.Column] != '\'' {
+func (l *Lexer) getRuneLiteral() error {
+	if l.pos.Column+2 >= len(l.lineBuf) {
+		return errors.New("incomplete rune literal")
+	}
+	ch := l.lineBuf[l.pos.Column+1]
+	l.tokens.AddUInt(l.startPos, TokenRune, uint64(ch))
+	if l.lineBuf[l.pos.Column+2] != '\'' {
 		return errors.New("expected closing single quote in rune literal")
 	}
+
+	l.pos.Column += 3
 
 	return nil
 }
 
 // getStringLiteral gets a string literal.
 // XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
-func (l *Lexer) getStringLiteral(raw bool) error {
-	sCol := l.pos.Column
+func (l *Lexer) getStringLiteral() error {
+	quote := l.lineBuf[l.pos.Column]
+	sCol := l.pos.Column + 1
 	var col int
 
-	if raw {
-		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '`'; col++ {
-		}
-	} else {
-		for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != '"'; col++ {
-		}
+	for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != quote; col++ {
 	}
 
 	if col == len(l.lineBuf) {
-		return errors.New("can't handle multi-line strings currently")
+		return errors.New("no closing quote")
 	}
 
-	l.tokens.AddString(l.pos, TokenString, string(l.lineBuf[sCol:col]))
+	l.tokens.AddString(l.startPos, TokenString, string(l.lineBuf[sCol:col]))
+	l.pos.Column = col+1
 	return nil
 }

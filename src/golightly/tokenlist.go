@@ -228,6 +228,8 @@ func (tl *TokenList) GetToken() (Token, SrcLoc) {
 	var b byte
 	err := binary.Read(tl.reader, endian, &b)
 	if err != nil {
+		loc.Line++
+		loc.Column = 1
 		return TokenEndOfSource, loc
 	}
 

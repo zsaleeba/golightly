@@ -19,7 +19,7 @@ func TestTokenList(t *testing.T) {
 	tl.Add(SrcLoc{5, 1}, TokenCloseGroup)
 	tl.AddString(SrcLoc{7, 1}, TokenIdentifier, "i")
 	tl.Add(SrcLoc{7, 3}, TokenDeclareAssign)
-	tl.AddUInt(SrcLoc{7, 5}, TokenUint, 42)
+	tl.AddUInt(SrcLoc{7, 6}, TokenUint, 42)
 	tl.Add(SrcLoc{7, 7}, TokenSemicolon)
 	tl.AddString(SrcLoc{8, 1}, TokenIdentifier, "j")
 	tl.Add(SrcLoc{8, 3}, TokenDeclareAssign)
@@ -69,7 +69,7 @@ func TestTokenList(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenUint(tl, 7, 5, TokenUint, 42)
+	err = checkTokenUint(tl, 7, 6, TokenUint, 42)
 	if err != nil {
 		t.Error(err)
 	}
@@ -99,7 +99,7 @@ func TestTokenList(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkToken(tl, 8, 8, TokenEndOfSource)
+	err = checkToken(tl, 9, 1, TokenEndOfSource)
 	if err != nil {
 		t.Error(err)
 	}
