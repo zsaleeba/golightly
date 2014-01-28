@@ -10,103 +10,8 @@ import (
 	"fmt"
 )
 
-// tokens indicate which type of symbol this lexical item is
-type Token int
-
-const (
-	// operators
-	TokenAdd Token = iota
-	TokenSubtract
-	TokenMultiply
-	TokenDivide
-	TokenModulus
-	TokenBitwiseAnd
-	TokenBitwiseOr
-	TokenBitwiseExor
-	TokenShiftLeft
-	TokenShiftRight
-	TokenBitClear
-	TokenAddAssign
-	TokenSubtractAssign
-	TokenMultiplyAssign
-	TokenDivideAssign
-	TokenModulusAssign
-	TokenBitwiseAndAssign
-	TokenBitwiseOrAssign
-	TokenBitwiseExorAssign
-	TokenShiftLeftAssign
-	TokenShiftRightAssign
-	TokenBitClearAssign
-	TokenLogicalAnd
-	TokenLogicalOr
-	TokenChannelArrow
-	TokenIncrement
-	TokenDecrement
-	TokenEquals
-	TokenLess
-	TokenGreater
-	TokenAssign
-	TokenNot
-	TokenNotEqual
-	TokenLessEqual
-	TokenGreaterEqual
-	TokenDeclareAssign
-	TokenEllipsis
-	TokenOpenGroup
-	TokenCloseGroup
-	TokenOpenOption
-	TokenCloseOption
-	TokenOpenBlock
-	TokenCloseBlock
-	TokenComma
-	TokenDot
-	TokenColon
-	TokenSemicolon
-
-	// keywords
-	TokenBreak
-	TokenCase
-	TokenChan
-	TokenConst
-	TokenContinue
-	TokenDefault
-	TokenDefer
-	TokenElse
-	TokenFallthrough
-	TokenFor
-	TokenFunc
-	TokenGo
-	TokenGoto
-	TokenIf
-	TokenImport
-	TokenInterface
-	TokenMap
-	TokenPackage
-	TokenRange
-	TokenReturn
-	TokenSelect
-	TokenStruct
-	TokenSwitch
-	TokenType
-	TokenVar
-
-	// literals
-	TokenString
-	TokenRune
-	TokenInt
-	TokenUint
-	TokenFloat32
-	TokenFloat64
-
-	// identifiers
-	TokenIdentifier
-
-	// end of source code
-	TokenEndOfSource
-)
-
 // a map of keywords for quick lookup
-var keywords map[string]Token = map[string]Token{
+var keywords map[string]TokenType = map[string]TokenType{
 	"break":       TokenBreak,
 	"case":        TokenCase,
 	"chan":        TokenChan,
@@ -130,7 +35,7 @@ var keywords map[string]Token = map[string]Token{
 	"select":      TokenSelect,
 	"struct":      TokenStruct,
 	"switch":      TokenSwitch,
-	"type":        TokenType,
+	"type":        TokenTypeKeyword,
 	"var":         TokenVar,
 }
 
