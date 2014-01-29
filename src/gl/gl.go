@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"golightly"
 	"os"
+	"runtime"
 )
 
 func usage() {
@@ -21,7 +22,13 @@ Options:
 func main() {
 	fmt.Println("golightly")
 
+	// allow it to use all the CPU cores
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// create the compiler
 	c := golightly.NewCompiler()
+
+	// compile the program
 	err := c.Compile(os.Args)
 	if err != nil {
 		fmt.Println(err)

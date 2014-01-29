@@ -46,12 +46,18 @@ type Lexer struct {
 	pos        SrcLoc // where we are in the source
 	lineBuf    []rune // the current source line
 
-	tokens *TokenList // the compact encoded token list
+	out chan  Token // the token stream is sent out through this channel
 }
+
+// the buffer size of the lexer output channel
+const lexerTokenChannelBuffers = 5
 
 // NewLexer creates a new lexer object
 func NewLexer() *Lexer {
-	return new(Lexer)
+	l := new(Lexer)
+	l.out = make(chan Token, lexerTokenChannelBuffers)
+	l.Init("-")
+	return l
 }
 
 // Init initialises the lexer before using LexLine.
@@ -60,7 +66,11 @@ func (l *Lexer) Init(filename string) {
 	l.pos.Column = 1
 	l.startPos = l.pos
 	l.sourceFile = filename
-	l.tokens = NewTokenList(l.sourceFile)
+}
+
+// Tokens returns a channel of tokens as output from the lexer.
+func (l *Lexer) Tokens() chan Token {
+	return l.out
 }
 
 // LexLine lexes a line of source code and adds the tokens to the end of
@@ -92,11 +102,7 @@ func (l *Lexer) LexLine(src string) error {
 // LexReader reads all input from a Reader and lexes it until EOF.
 func (l *Lexer) LexReader(r io.Reader, filename string) error {
 	// start afresh
-	l.pos.Line = 1
-	l.pos.Column = 1
-	l.startPos = l.pos
-	l.sourceFile = filename
-	l.tokens = NewTokenList(l.sourceFile)
+	l.Init(filename)
 
 	// get lines until EOF
 	scanner := bufio.NewScanner(r)
@@ -165,12 +171,12 @@ func (l *Lexer) getToken() (bool, error) {
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
-			l.tokens.Add(l.startPos, token)
+			l.out <- SimpleToken{l.startPos, token}
 			return true, nil
 		}
 
 		// it must be an identifier
-		l.tokens.AddString(l.startPos, TokenIdentifier, word)
+		l.out <- StringToken{l.startPos, TokenIdentifier, word}
 		return true, nil
 	}
 
@@ -189,7 +195,7 @@ func (l *Lexer) getToken() (bool, error) {
 	token, runes, ok := l.getOperator(ch, ch2)
 	if ok {
 		l.pos.Column += runes
-		l.tokens.Add(l.startPos, token)
+		l.out <- SimpleToken{l.startPos, token}
 		return true, nil
 	}
 
@@ -209,7 +215,7 @@ func (l *Lexer) getToken() (bool, error) {
 
 // getOperator gets an operator token.
 // returns the token, the number of characters absorbed and success.
-func (l *Lexer) getOperator(ch, ch2 rune) (Token, int, bool) {
+func (l *Lexer) getOperator(ch, ch2 rune) (TokenType, int, bool) {
 	// operator lexing is performed as a hard-coded trie for speed.
 
 	switch ch {
@@ -403,7 +409,7 @@ func (l *Lexer) getNumeric() error {
 			return err
 		}
 
-		l.tokens.AddFloat(l.startPos, v)
+		l.out <- FloatToken{l.startPos, TokenFloat64, v}
 		l.pos.Column = col
 		return nil
 	} else {
@@ -413,7 +419,7 @@ func (l *Lexer) getNumeric() error {
 			return err
 		}
 
-		l.tokens.AddUInt(l.startPos, TokenUint, v)
+		l.out <- UintToken{l.startPos, TokenUint, v}
 		l.pos.Column = col
 		return nil
 	}
@@ -426,7 +432,7 @@ func (l *Lexer) getRuneLiteral() error {
 		return errors.New("incomplete rune literal")
 	}
 	ch := l.lineBuf[l.pos.Column+1]
-	l.tokens.AddUInt(l.startPos, TokenRune, uint64(ch))
+	l.out <- UintToken{l.startPos, TokenRune, uint64(ch)}
 	if l.lineBuf[l.pos.Column+2] != '\'' {
 		return errors.New("expected closing single quote in rune literal")
 	}
@@ -450,7 +456,7 @@ func (l *Lexer) getStringLiteral() error {
 		return errors.New("no closing quote")
 	}
 
-	l.tokens.AddString(l.startPos, TokenString, string(l.lineBuf[sCol:col]))
+	l.out <- StringToken{l.startPos, TokenString, string(l.lineBuf[sCol:col])}
 	l.pos.Column = col+1
 	return nil
 }
