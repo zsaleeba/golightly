@@ -109,7 +109,7 @@ type Token interface {
 
 type SimpleToken struct {
 	pos SrcLoc
-	tt TokenType
+	tt  TokenType
 }
 
 func (st SimpleToken) GetTokenType() TokenType {
@@ -117,8 +117,8 @@ func (st SimpleToken) GetTokenType() TokenType {
 }
 
 type StringToken struct {
-	pos SrcLoc
-	tt TokenType
+	pos    SrcLoc
+	tt     TokenType
 	strVal string
 }
 
@@ -127,8 +127,8 @@ func (st StringToken) GetTokenType() TokenType {
 }
 
 type UintToken struct {
-	pos SrcLoc
-	tt TokenType
+	pos     SrcLoc
+	tt      TokenType
 	uintVal uint64
 }
 
@@ -137,8 +137,8 @@ func (ut UintToken) GetTokenType() TokenType {
 }
 
 type FloatToken struct {
-	pos SrcLoc
-	tt TokenType
+	pos      SrcLoc
+	tt       TokenType
 	floatVal float64
 }
 

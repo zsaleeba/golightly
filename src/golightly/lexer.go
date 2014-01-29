@@ -3,11 +3,11 @@ package golightly
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"unicode"
-	"fmt"
 )
 
 // a map of keywords for quick lookup
@@ -46,7 +46,7 @@ type Lexer struct {
 	pos        SrcLoc // where we are in the source
 	lineBuf    []rune // the current source line
 
-	out chan  Token // the token stream is sent out through this channel
+	out chan Token // the token stream is sent out through this channel
 }
 
 // the buffer size of the lexer output channel
@@ -457,6 +457,6 @@ func (l *Lexer) getStringLiteral() error {
 	}
 
 	l.out <- StringToken{l.startPos, TokenString, string(l.lineBuf[sCol:col])}
-	l.pos.Column = col+1
+	l.pos.Column = col + 1
 	return nil
 }

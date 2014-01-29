@@ -8,7 +8,7 @@ import (
 // type Compiler is a container for an entire compiler, including
 // all passes of all files.
 type Compiler struct {
-	files map[string]SourceFile
+	files      map[string]SourceFile
 	filesMutex sync.Mutex
 }
 
@@ -24,5 +24,3 @@ func NewCompiler() *Compiler {
 func (c *Compiler) Compile(srcFiles []string) error {
 	return errors.New("unimplemented")
 }
-
-
