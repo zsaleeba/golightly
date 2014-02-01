@@ -1,11 +1,11 @@
 package golightly
 
-// TokenType indicate which type of symbol this lexical item is
-type TokenType int
+// TokenKind indicate which type of symbol this lexical item is
+type TokenKind int
 
 const (
 	// operators
-	TokenAdd TokenType = iota
+	TokenAdd TokenKind = iota
 	TokenSubtract
 	TokenMultiply
 	TokenDivide
@@ -98,50 +98,50 @@ const (
 // type Token is a "sum type" implemented using an interface.
 // Tokens from the lexer can come with a variety of values.
 // It's implemented by simpleToken, stringToken, uintToken and
-// floatToken. All have the ability to have a TokenType set,
+// floatToken. All have the ability to have a TokenKind set,
 // but each has differing ancillary values.
 //
 // Tokens can be created using struct initialisers.
 // eg. StringToken{TokenIdentifier, "hello"}
 type Token interface {
-	GetTokenType() TokenType
+	TokenKind() TokenKind
 }
 
 type SimpleToken struct {
 	pos SrcLoc
-	tt  TokenType
+	tt  TokenKind
 }
 
-func (st SimpleToken) GetTokenType() TokenType {
+func (st SimpleToken) TokenKind() TokenKind {
 	return st.tt
 }
 
 type StringToken struct {
 	pos    SrcLoc
-	tt     TokenType
+	tt     TokenKind
 	strVal string
 }
 
-func (st StringToken) GetTokenType() TokenType {
+func (st StringToken) TokenKind() TokenKind {
 	return st.tt
 }
 
 type UintToken struct {
 	pos     SrcLoc
-	tt      TokenType
+	tt      TokenKind
 	uintVal uint64
 }
 
-func (ut UintToken) GetTokenType() TokenType {
+func (ut UintToken) TokenKind() TokenKind {
 	return ut.tt
 }
 
 type FloatToken struct {
 	pos      SrcLoc
-	tt       TokenType
+	tt       TokenKind
 	floatVal float64
 }
 
-func (ft FloatToken) GetTokenType() TokenType {
+func (ft FloatToken) TokenKind() TokenKind {
 	return ft.tt
 }

@@ -11,7 +11,7 @@ import (
 )
 
 // a map of keywords for quick lookup
-var keywords map[string]TokenType = map[string]TokenType{
+var keywords map[string]TokenKind = map[string]TokenKind{
 	"break":       TokenBreak,
 	"case":        TokenCase,
 	"chan":        TokenChan,
@@ -215,7 +215,7 @@ func (l *Lexer) getToken() (bool, error) {
 
 // getOperator gets an operator token.
 // returns the token, the number of characters absorbed and success.
-func (l *Lexer) getOperator(ch, ch2 rune) (TokenType, int, bool) {
+func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 	// operator lexing is performed as a hard-coded trie for speed.
 
 	switch ch {
