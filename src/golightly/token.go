@@ -105,11 +105,11 @@ const (
 // eg. StringToken{TokenIdentifier, "hello"}
 type Token interface {
 	TokenKind() TokenKind
+	Pos() SrcSpan
 }
 
 type SimpleToken struct {
-	pos    SrcLoc
-	endPos SrcLoc
+	pos    SrcSpan
 	tt     TokenKind
 }
 
@@ -117,9 +117,12 @@ func (st SimpleToken) TokenKind() TokenKind {
 	return st.tt
 }
 
+func (st SimpleToken) Pos() SrcSpan {
+	return st.pos
+}
+
 type StringToken struct {
-	pos    SrcLoc
-	endPos SrcLoc
+	pos    SrcSpan
 	tt     TokenKind
 	strVal string
 }
@@ -128,9 +131,12 @@ func (st StringToken) TokenKind() TokenKind {
 	return st.tt
 }
 
+func (st StringToken) Pos() SrcSpan {
+	return st.pos
+}
+
 type UintToken struct {
-	pos     SrcLoc
-	endPos  SrcLoc
+	pos     SrcSpan
 	tt      TokenKind
 	uintVal uint64
 }
@@ -139,9 +145,12 @@ func (ut UintToken) TokenKind() TokenKind {
 	return ut.tt
 }
 
+func (st UintToken) Pos() SrcSpan {
+	return st.pos
+}
+
 type FloatToken struct {
-	pos      SrcLoc
-	endPos   SrcLoc
+	pos      SrcSpan
 	tt       TokenKind
 	floatVal float64
 }
@@ -149,3 +158,8 @@ type FloatToken struct {
 func (ft FloatToken) TokenKind() TokenKind {
 	return ft.tt
 }
+
+func (st FloatToken) Pos() SrcSpan {
+	return st.pos
+}
+

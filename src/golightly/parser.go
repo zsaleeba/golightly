@@ -1,10 +1,10 @@
 package golightly
 
+import "errors"
+
 // type Parser controls parsing of a token stream into an AST
 type Parser struct {
 	filename    string // the name of the file being parsed
-	tokenLoc    SrcLoc // the location in the file of the current token
-	tokenEndLoc SrcLoc // the location in the file of the end of the current token
 
 	in chan Token // the stream of tokens is received through this channel
 	tokenQueue  []Token // a buffer of the incoming tokens
@@ -22,6 +22,15 @@ func NewParser() *Parser {
 // Parse runs the parser and breaks the program down into an Abstract Syntax Tree.
 func (p *Parser) Parse() error {
 	return nil
+}
+
+func (p *Parser) parseSourceFile() error {
+	packageToken := p.GetToken(0, 1)
+	if packageToken.TokenKind() != TokenPackage {
+		return NewError(p.filename, packageToken.Pos(), "the file should start with 'package <package name>'")
+	}
+
+	return errors.New("unimplemented")
 }
 
 // GetToken gets a token from the input token channel, with look-ahead available.

@@ -62,8 +62,7 @@ func NewLexer() *Lexer {
 
 // Init initialises the lexer before using LexLine.
 func (l *Lexer) Init(filename string) {
-	l.pos.Line = 1
-	l.pos.Column = 1
+	l.pos = SrcLoc{1, 1}
 	l.startPos = l.pos
 	l.sourceFile = filename
 }
@@ -171,12 +170,12 @@ func (l *Lexer) getToken() (bool, error) {
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
-			l.out <- SimpleToken{l.startPos, l.pos, token}
+			l.out <- SimpleToken{SrcSpan{l.startPos, l.pos}, token}
 			return true, nil
 		}
 
 		// it must be an identifier
-		l.out <- StringToken{l.startPos, l.pos, TokenIdentifier, word}
+		l.out <- StringToken{SrcSpan{l.startPos, l.pos}, TokenIdentifier, word}
 		return true, nil
 	}
 
@@ -195,7 +194,7 @@ func (l *Lexer) getToken() (bool, error) {
 	token, runes, ok := l.getOperator(ch, ch2)
 	if ok {
 		l.pos.Column += runes
-		l.out <- SimpleToken{l.startPos, l.pos, token}
+		l.out <- SimpleToken{SrcSpan{l.startPos, l.pos}, token}
 		return true, nil
 	}
 
@@ -410,7 +409,7 @@ func (l *Lexer) getNumeric() error {
 		}
 
 		l.pos.Column = col
-		l.out <- FloatToken{l.startPos, l.pos, TokenFloat64, v}
+		l.out <- FloatToken{SrcSpan{l.startPos, l.pos}, TokenFloat64, v}
 		return nil
 	} else {
 		// it's an int, parse it
@@ -420,7 +419,7 @@ func (l *Lexer) getNumeric() error {
 		}
 
 		l.pos.Column = col
-		l.out <- UintToken{l.startPos, l.pos, TokenUint, v}
+		l.out <- UintToken{SrcSpan{l.startPos, l.pos}, TokenUint, v}
 		return nil
 	}
 }
@@ -437,7 +436,7 @@ func (l *Lexer) getRuneLiteral() error {
 	}
 
 	l.pos.Column += 3
-	l.out <- UintToken{l.startPos, l.pos, TokenRune, uint64(ch)}
+	l.out <- UintToken{SrcSpan{l.startPos, l.pos}, TokenRune, uint64(ch)}
 
 	return nil
 }
@@ -457,7 +456,7 @@ func (l *Lexer) getStringLiteral() error {
 	}
 
 	l.pos.Column = col + 1
-	l.out <- StringToken{l.startPos, l.pos, TokenString, string(l.lineBuf[sCol:col])}
+	l.out <- StringToken{SrcSpan{l.startPos, l.pos}, TokenString, string(l.lineBuf[sCol:col])}
 
 	return nil
 }
