@@ -6,6 +6,7 @@ type Parser struct {
 	tokenLoc    SrcLoc // the location in the file of the current token
 	tokenEndLoc SrcLoc // the location in the file of the end of the current token
 
+	in chan Token // the stream of tokens is received through this channel
 	tokenQueue  []Token // a buffer of the incoming tokens
 
 	out chan *AST // the stream of ASTs is sent out through this channel
@@ -14,11 +15,39 @@ type Parser struct {
 func NewParser() *Parser {
 	p := new(Parser)
 	p.out = make(chan *AST)
-
+	p.tokenQueue = make([]Token, 0, 3)
 	return p
 }
 
-// Parse runs the parser and breaks the program down into an Abstract Syntax Tree
+// Parse runs the parser and breaks the program down into an Abstract Syntax Tree.
 func (p *Parser) Parse() error {
 	return nil
+}
+
+// GetToken gets a token from the input token channel, with look-ahead available.
+func (p *Parser) GetToken(ahead int, discard int) Token {
+	// do we need to get more tokens?
+	if ahead >= len(p.tokenQueue) {
+		// do we need to make the token queue larger?
+		if ahead >= cap(p.tokenQueue) {
+			// make more space
+			newQueue := make([]Token, len(p.tokenQueue), ahead+1)
+			copy(newQueue, p.tokenQueue)
+			p.tokenQueue = newQueue
+		}
+
+		// get some more tokens
+		for len(p.tokenQueue) <= ahead {
+			newToken := <- p.in
+			p.tokenQueue = append(p.tokenQueue, newToken)
+		}
+	}
+
+	// discard some if we have to
+	result := p.tokenQueue[ahead]
+	if discard > 0 {
+		copy(p.tokenQueue, p.tokenQueue[discard:])
+	}
+
+	return result
 }
