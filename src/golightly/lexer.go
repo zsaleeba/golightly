@@ -171,12 +171,12 @@ func (l *Lexer) getToken() (bool, error) {
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
-			l.out <- SimpleToken{l.startPos, token}
+			l.out <- SimpleToken{l.startPos, l.pos, token}
 			return true, nil
 		}
 
 		// it must be an identifier
-		l.out <- StringToken{l.startPos, TokenIdentifier, word}
+		l.out <- StringToken{l.startPos, l.pos, TokenIdentifier, word}
 		return true, nil
 	}
 
@@ -195,7 +195,7 @@ func (l *Lexer) getToken() (bool, error) {
 	token, runes, ok := l.getOperator(ch, ch2)
 	if ok {
 		l.pos.Column += runes
-		l.out <- SimpleToken{l.startPos, token}
+		l.out <- SimpleToken{l.startPos, l.pos, token}
 		return true, nil
 	}
 
@@ -409,8 +409,8 @@ func (l *Lexer) getNumeric() error {
 			return err
 		}
 
-		l.out <- FloatToken{l.startPos, TokenFloat64, v}
 		l.pos.Column = col
+		l.out <- FloatToken{l.startPos, l.pos, TokenFloat64, v}
 		return nil
 	} else {
 		// it's an int, parse it
@@ -419,8 +419,8 @@ func (l *Lexer) getNumeric() error {
 			return err
 		}
 
-		l.out <- UintToken{l.startPos, TokenUint, v}
 		l.pos.Column = col
+		l.out <- UintToken{l.startPos, l.pos, TokenUint, v}
 		return nil
 	}
 }
@@ -432,12 +432,12 @@ func (l *Lexer) getRuneLiteral() error {
 		return errors.New("incomplete rune literal")
 	}
 	ch := l.lineBuf[l.pos.Column+1]
-	l.out <- UintToken{l.startPos, TokenRune, uint64(ch)}
 	if l.lineBuf[l.pos.Column+2] != '\'' {
 		return errors.New("expected closing single quote in rune literal")
 	}
 
 	l.pos.Column += 3
+	l.out <- UintToken{l.startPos, l.pos, TokenRune, uint64(ch)}
 
 	return nil
 }
@@ -456,7 +456,8 @@ func (l *Lexer) getStringLiteral() error {
 		return errors.New("no closing quote")
 	}
 
-	l.out <- StringToken{l.startPos, TokenString, string(l.lineBuf[sCol:col])}
 	l.pos.Column = col + 1
+	l.out <- StringToken{l.startPos, l.pos, TokenString, string(l.lineBuf[sCol:col])}
+
 	return nil
 }
