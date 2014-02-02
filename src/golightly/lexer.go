@@ -175,7 +175,7 @@ func (l *Lexer) getToken() (bool, error) {
 		}
 
 		// it must be an identifier
-		l.out <- StringToken{SrcSpan{l.startPos, l.pos}, TokenIdentifier, word}
+		l.out <- StringToken{SimpleToken{SrcSpan{l.startPos, l.pos}, TokenIdentifier}, word}
 		return true, nil
 	}
 
@@ -409,7 +409,7 @@ func (l *Lexer) getNumeric() error {
 		}
 
 		l.pos.Column = col
-		l.out <- FloatToken{SrcSpan{l.startPos, l.pos}, TokenFloat64, v}
+		l.out <- FloatToken{SimpleToken{SrcSpan{l.startPos, l.pos}, TokenFloat64}, v}
 		return nil
 	} else {
 		// it's an int, parse it
@@ -419,7 +419,7 @@ func (l *Lexer) getNumeric() error {
 		}
 
 		l.pos.Column = col
-		l.out <- UintToken{SrcSpan{l.startPos, l.pos}, TokenUint, v}
+		l.out <- UintToken{SimpleToken{SrcSpan{l.startPos, l.pos}, TokenUint}, v}
 		return nil
 	}
 }
@@ -436,7 +436,7 @@ func (l *Lexer) getRuneLiteral() error {
 	}
 
 	l.pos.Column += 3
-	l.out <- UintToken{SrcSpan{l.startPos, l.pos}, TokenRune, uint64(ch)}
+	l.out <- UintToken{SimpleToken{SrcSpan{l.startPos, l.pos}, TokenRune}, uint64(ch)}
 
 	return nil
 }
@@ -456,7 +456,7 @@ func (l *Lexer) getStringLiteral() error {
 	}
 
 	l.pos.Column = col + 1
-	l.out <- StringToken{SrcSpan{l.startPos, l.pos}, TokenString, string(l.lineBuf[sCol:col])}
+	l.out <- StringToken{SimpleToken{SrcSpan{l.startPos, l.pos}, TokenString}, string(l.lineBuf[sCol:col])}
 
 	return nil
 }
