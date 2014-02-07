@@ -122,44 +122,41 @@ func (st SimpleToken) Pos() SrcSpan {
 }
 
 type StringToken struct {
-	pos    SrcSpan
-	tt     TokenKind
+	s SimpleToken
 	strVal string
 }
 
 func (st StringToken) TokenKind() TokenKind {
-	return st.tt
+	return st.s.tt
 }
 
 func (st StringToken) Pos() SrcSpan {
-	return st.pos
+	return st.s.pos
 }
 
 type UintToken struct {
-	pos     SrcSpan
-	tt      TokenKind
+	s SimpleToken
 	uintVal uint64
 }
 
 func (ut UintToken) TokenKind() TokenKind {
-	return ut.tt
+	return ut.s.tt
 }
 
-func (st UintToken) Pos() SrcSpan {
-	return st.pos
+func (ut UintToken) Pos() SrcSpan {
+	return ut.s.pos
 }
 
 type FloatToken struct {
-	pos      SrcSpan
-	tt       TokenKind
+	s SimpleToken
 	floatVal float64
 }
 
 func (ft FloatToken) TokenKind() TokenKind {
-	return ft.tt
+	return ft.s.tt
 }
 
 func (st FloatToken) Pos() SrcSpan {
-	return st.pos
+	return st.s.pos
 }
 
