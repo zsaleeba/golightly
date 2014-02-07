@@ -1,13 +1,12 @@
 package golightly
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"unicode"
+	"io"
+	"bufio"
 )
 
 // a map of keywords for quick lookup
@@ -42,54 +41,201 @@ var keywords map[string]TokenKind = map[string]TokenKind{
 // the running state of the lexical analyser
 type Lexer struct {
 	sourceFile string // name of the source file
-	startPos   SrcLoc // where this token started in the source
-	pos        SrcLoc // where we are in the source
-	lineBuf    []rune // the current source line
+	pos        SrcSpan // where we are in the source file
 
-	out chan Token // the token stream is sent out through this channel
+	reader     *bufio.Reader // used to read the input file
+	nextRune   rune // the next rune in input
+	haveNextRune bool // true if we have a rune buffered in nextRune
+	longComment bool // true if we're in a C-style /*...*/ comment
+	prevStar   bool // true in a long comment if the previous character was an asterisk
+	ncNextRunes [ncNextRunesSize]rune // the next non-comment runes in input
+	ncNextRuneCount int // count of the number of items in ncNextRunes
+
+	nextToken  Token  // the next token
+	haveNextToken bool // true if the have the next token ready
 }
 
 // the buffer size of the lexer output channel
 const lexerTokenChannelBuffers = 5
+const tokenBufSize = 64
+const ncNextRunesSize = 3
+const initialStringStorage = 80
 
 // NewLexer creates a new lexer object
 func NewLexer() *Lexer {
 	l := new(Lexer)
-	l.out = make(chan Token, lexerTokenChannelBuffers)
 	l.Init("-")
 	return l
 }
 
 // Init initialises the lexer before using LexLine.
 func (l *Lexer) Init(filename string) {
-	l.pos = SrcLoc{1, 1}
-	l.startPos = l.pos
+	l.pos = SrcSpan{SrcLoc{1, 1}, SrcLoc{1, 1}}
 	l.sourceFile = filename
+	l.haveNextToken = false
+	l.haveNextRune = false
+	l.ncNextRuneCount = 0
+	l.longComment = false
 }
 
-// Tokens returns a channel of tokens as output from the lexer.
-func (l *Lexer) Tokens() chan Token {
-	return l.out
+func (l *Lexer) Close() {
 }
 
-// LexLine lexes a line of source code and adds the tokens to the end of
-// the lexed token list. The provided source should end on a line
-// boundary so there are no split tokens at the end.
-func (l *Lexer) LexLine(src string) error {
-	// prepare for this line
-	defer func() {
-		l.pos.Column = 1
-		l.pos.Line++
-	}()
+// LexReader starts lexical analysis of a generalised Reader.
+// It creates its own buffering of the reader, so it's not necessary to
+// provide a buffered reader.
+func (l *Lexer) LexReader(r io.Reader, filename string) {
+	// start afresh
+	l.Init(filename)
+	l.reader = bufio.NewReader(r)
+}
 
-	// since columns are 1-based we add a spurious character at the start so lineBuf[1] is the first character
-	l.lineBuf = []rune(" " + src)
+// getBufferedRune gets a rune from the source including comments etc..
+// it's designed to be called from getUntrackedRune() only.
+func (l *Lexer) getBufferedRune() (rune, error) {
+	if l.haveNextRune {
+		// get it from our buffer
+		l.haveNextRune = false
+		return l.nextRune, nil
+	} else {
+		// read it
+		r, _, err := l.reader.ReadRune()
+		return r, err
+	}
+}
 
-	// get tokens until end of line
-	ok := true
-	for ok {
-		var err error
-		ok, err = l.getToken()
+// getUntrackedRune gets a rune while removing comments from the stream.
+// it doesn't change the line/column tracking.
+func (l *Lexer) getUntrackedRune() (rune, error) {
+	// get a rune
+	r, err := l.getBufferedRune()
+	if err != nil {
+		return 0, err
+	}
+
+	// are we in a C-style /*...*/ comment?
+	if !l.longComment {
+		// no, check if a comment is starting
+		if r == '/' {
+			// this might be the start of a comment
+			r2, err2 := l.getBufferedRune()
+			if err2 != nil {
+				if err2 == io.EOF {
+					// it was a slash at EOF. just return it.
+					return r, nil
+				} else {
+					return 0, err2
+				}
+			}
+
+			switch r2 {
+			case '/':
+				// comment until end of line, absorb the rest of the line
+				for {
+					r, err = l.getBufferedRune()
+					if err != nil {
+						return 0, err
+					}
+
+					if r == '\n' {
+						// return end of line
+						return r, nil
+					}
+				}
+
+			case '*':
+				// C-style /*...*/ comment starts here. return spaces for
+				// these characters so column counts work correctly.
+				l.haveNextRune = true
+				l.nextRune = ' '
+				l.longComment = true
+				l.prevStar = false
+				return ' ', nil
+
+			default:
+				// it's not a comment at all. return it as normal.
+				l.haveNextRune = true
+				l.nextRune = r2
+				return r, nil
+			}
+		}
+	} else {
+		// we're in a C-style /*...*/ comment. return line feeds and convert
+		// everything else into spaces so column counts work correctly.
+		switch r {
+		case '\n':
+			// end of line - return is so we can count lines.
+			l.prevStar = false
+			return r, nil
+
+		case '*':
+			// possible end of comment coming up.
+			l.prevStar = true
+			return ' ', nil
+
+		case '/':
+			if l.prevStar {
+				// end of comment.
+				l.longComment = false
+			}
+			return ' ', nil
+
+		default:
+			// any other comment character is just converted to a space.
+			l.prevStar = false
+			return ' ', nil
+		}
+	}
+
+	// just a normal character
+	return r, nil
+}
+
+// peekRune returns a rune from ahead while removing comments from the stream.
+// it doesn't change the line/column tracking.
+func (l *Lexer) peekRune(ahead int) (rune, error) {
+	// make sure the buffer is full enough
+	for l.ncNextRuneCount <= ahead {
+		// get a character
+		r, err := l.getRune()
+		if err != nil {
+			return 0, err
+		}
+
+		// buffer it
+		l.ncNextRunes[l.ncNextRuneCount] = r
+		l.ncNextRuneCount++
+	}
+
+	// return it
+	return l.ncNextRunes[ahead], nil
+}
+
+// getRune gets a rune while removing comments from the stream and tracking
+// line/column counts.
+func (l *Lexer) getRune() (rune, error) {
+	// get the next character
+	ch, err := l.getUntrackedRune()
+	if err != nil {
+		return 0, err
+	}
+
+	// count columns and lines
+	if ch == '\n' {
+		l.pos.end.Line++
+		l.pos.end.Column = 1
+	} else {
+		l.pos.end.Column++
+	}
+
+	return ch, nil
+}
+
+// tossRunes throws away a number of runes (which we've probably already
+// scanned using peekRune). it also tracks line/column counts.
+func (l *Lexer) tossRunes(howMany int) error {
+	for i := 0; i < howMany; i++ {
+		_, err := l.getRune()
 		if err != nil {
 			return err
 		}
@@ -98,69 +244,82 @@ func (l *Lexer) LexLine(src string) error {
 	return nil
 }
 
-// LexReader reads all input from a Reader and lexes it until EOF.
-func (l *Lexer) LexReader(r io.Reader, filename string) error {
-	// start afresh
-	l.Init(filename)
-
-	// get lines until EOF
-	scanner := bufio.NewScanner(r)
-	var err error
-	for scanner.Scan() {
-		// get the line
-		l.lineBuf = []rune(" " + scanner.Text())
-
-		// tokenise the line
-		var ok bool
-		for ok, err = l.getToken(); ok && err == nil; {
-		}
-
+// skipWhitespace gets a rune while skipping whitespace and keeping
+// track of column and line counts.
+func (l *Lexer) skipWhitespace() error {
+	// skip leading whitespace
+	for {
+		ch, err := l.peekRune(0)
 		if err != nil {
-			return err
+			if err == io.EOF {
+				// end of source
+				return nil
+			} else {
+				return err
+			}
 		}
-	}
 
-	// check for any line scanner errors
-	err = scanner.Err()
-	return err
+		// is it whitespace?
+		if ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n' {
+			// no, return
+			return nil
+		}
+
+		// move to the next character
+		l.getRune()
+	}
 }
 
-// LexFile opens a file and lexes the entire contents.
-func (l *Lexer) LexFile(filename string) error {
-	// open the file
-	inFile, err := os.Open(filename)
-	if err != nil {
-		return err
+// GetToken gets the next token from the buffer.
+// returns the token and an error.
+func (l *Lexer) GetToken() (Token, error) {
+	if l.haveNextToken {
+		// use the token we already have
+		l.haveNextToken = false
+		return l.nextToken, nil
+	} else {
+		// lex a token
+		return l.lexToken()
 	}
-
-	defer inFile.Close()
-
-	reader := bufio.NewReader(inFile)
-
-	// now lex it
-	return l.LexReader(reader, filename)
 }
 
-// getToken gets the next token from the line buffer.
+// PeekToken returns the next token from the line buffer without removing it.
+// returns the token and an error.
+func (l *Lexer) PeekToken() (Token, error) {
+	if l.haveNextToken {
+		// return the token we already have
+		return l.nextToken, nil
+	} else {
+		// lex a token
+		t, err := l.lexToken()
+		if err != nil {
+			return t, err
+		}
+
+		// buffer it
+		l.haveNextToken = true
+		l.nextToken = t
+		return t, nil
+	}
+}
+
+// lexToken gets the next token from the line buffer.
 // adds the token to the token list.
 // returns success and an error. success is false at end of line.
-func (l *Lexer) getToken() (bool, error) {
-	// are there any characters left?
-	if l.pos.Column >= len(l.lineBuf) {
-		return false, nil
+func (l *Lexer) lexToken() (Token, error) {
+	// get a character
+	err := l.skipWhitespace()
+	if err != nil {
+		return nil, err
 	}
 
-	// skip leading whitespace
-	ch := l.lineBuf[l.pos.Column]
-	for ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
-		l.pos.Column++
-		if l.pos.Column > len(l.lineBuf) {
-			return false, nil // end of line
-		}
-		ch = l.lineBuf[l.pos.Column]
-	}
+	l.pos.start = l.pos.end
 
-	l.startPos = l.pos
+	// get the next character
+	ch, err := l.peekRune(0)
+	if err != nil {
+		return nil, err
+	}
 
 	// is it an identifier?
 	if unicode.IsLetter(ch) || ch == '_' {
@@ -170,55 +329,52 @@ func (l *Lexer) getToken() (bool, error) {
 		// is it a keyword?
 		token, ok := keywords[word]
 		if ok {
-			l.out <- SimpleToken{SrcSpan{l.startPos, l.pos}, token}
-			return true, nil
+			return SimpleToken{l.pos, token}, nil
 		}
 
 		// it must be an identifier
-		l.out <- StringToken{SrcSpan{l.startPos, l.pos}, TokenIdentifier, word}
-		return true, nil
+		return StringToken{l.pos, TokenIdentifier, word}, nil
 	}
 
 	// is it a numeric literal?
-	var ch2 rune
-	if l.pos.Column+1 < len(l.lineBuf) {
-		ch2 = l.lineBuf[l.pos.Column+1]
-	}
-
-	if unicode.IsDigit(ch) || (ch == '.' && unicode.IsDigit(ch2)) {
-		err := l.getNumeric()
-		return true, err
+	if unicode.IsDigit(ch) {
+		// starts with a digit
+		return l.getNumeric()
+	} else if ch == '.' {
+		// starts with '.', is it followed by a digit?
+		ch2, _ := l.peekRune(1)
+		if unicode.IsDigit(ch2) {
+			// of the form '.4356'
+			return l.getNumeric()
+		}
 	}
 
 	// is it an operator?
-	token, runes, ok := l.getOperator(ch, ch2)
-	if ok {
-		l.pos.Column += runes
-		l.out <- SimpleToken{SrcSpan{l.startPos, l.pos}, token}
-		return true, nil
+	token, runes, isOp := l.getOperator(ch)
+	if isOp {
+		l.tossRunes(runes)
+		return SimpleToken{l.pos, token}, nil
 	}
 
 	// is it a string literal?
 	switch ch {
 	case '\'':
-		err := l.getRuneLiteral()
-		return err == nil, err
+		return l.getRuneLiteral()
 
 	case '"', '`':
-		err := l.getStringLiteral()
-		return err == nil, err
+		return l.getStringLiteral()
 	}
 
-	return false, errors.New(fmt.Sprintf("illegal character '%c' (0x%02x)", ch, ch))
+	return nil, errors.New(fmt.Sprintf("illegal character '%c' (0x%02x)", ch, ch))
 }
 
 // getOperator gets an operator token.
 // returns the token, the number of characters absorbed and success.
-func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
+func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 	// operator lexing is performed as a hard-coded trie for speed.
-
 	switch ch {
 	case '+':
+		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '+='
 			return TokenAddAssign, 2, true
@@ -229,6 +385,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '-':
+		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '-='
 			return TokenSubtractAssign, 2, true
@@ -239,6 +396,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '*':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '*='
 			return TokenMultiplyAssign, 2, true
 		} else { // '*'
@@ -246,6 +404,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '/':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '/='
 			return TokenDivideAssign, 2, true
 		} else { // '/'
@@ -253,6 +412,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '%':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '%='
 			return TokenModulusAssign, 2, true
 		} else { // '%'
@@ -260,6 +420,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '&':
+		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '&='
 			return TokenBitwiseAndAssign, 2, true
@@ -270,6 +431,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '|':
+		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '|='
 			return TokenBitwiseOrAssign, 2, true
@@ -280,6 +442,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '^':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '^='
 			return TokenBitwiseExorAssign, 2, true
 		} else { // '^'
@@ -287,14 +450,11 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '<':
+		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '<':
 			// look ahead another character
-			var ch3 rune
-			if l.pos.Column+2 < len(l.lineBuf) {
-				ch3 = l.lineBuf[l.pos.Column+2]
-			}
-
+			ch3, _ := l.peekRune(2)
 			if ch3 == '=' { // '<<='
 				return TokenShiftLeftAssign, 3, true
 			} else { // '<<'
@@ -309,14 +469,11 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '>':
+		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '>':
 			// look ahead another character
-			var ch3 rune
-			if l.pos.Column+2 < len(l.lineBuf) {
-				ch3 = l.lineBuf[l.pos.Column+2]
-			}
-
+			ch3, _ := l.peekRune(2)
 			if ch3 == '=' { // '>>='
 				return TokenShiftRightAssign, 3, true
 			} else { // '>>'
@@ -329,6 +486,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '=':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '=='
 			return TokenEquals, 2, true
 		} else { // '='
@@ -336,6 +494,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case '!':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '!='
 			return TokenNotEqual, 2, true
 		} else { // '!'
@@ -343,6 +502,7 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 		}
 
 	case ':':
+		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // ':='
 			return TokenDeclareAssign, 2, true
 		} else { // ':'
@@ -374,89 +534,122 @@ func (l *Lexer) getOperator(ch, ch2 rune) (TokenKind, int, bool) {
 
 // getWord gets an identifier. returns the word.
 func (l *Lexer) getWord() string {
-	// get character until end of line
-	for ; l.pos.Column < len(l.lineBuf); l.pos.Column++ {
-		ch := l.lineBuf[l.pos.Column]
+	// get characters until the end
+	var word string
+	for {
+		// get the next rune
+		ch, err := l.peekRune(0)
+		if err != nil {
+			return word
+		}
 
 		// done at end of word
 		if !unicode.IsLetter(ch) && ch != '_' {
-			return string(l.lineBuf[l.startPos.Column:l.pos.Column])
+			return word
 		}
-	}
 
-	// reached end of line
-	return string(l.lineBuf[l.startPos.Column:l.pos.Column])
+		// add the character to our word and move to the next character
+		word += string(ch)
+		l.getRune()
+	}
 }
 
 // getNumeric gets a number.
 // XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
-func (l *Lexer) getNumeric() error {
-	// scan for a non-digit character
-	var col int
-	for col = l.pos.Column; col < len(l.lineBuf) && unicode.IsDigit(l.lineBuf[col]); col++ {
+func (l *Lexer) getNumeric() (Token, error) {
+	// get characters until the end
+	var word string
+	var isFloat bool
+	for {
+		// get the next rune
+		ch, err := l.peekRune(0)
+		if err != nil {
+			break
+		}
+
+		// done at end of word
+		if !unicode.IsDigit(ch) && ch != '.' && ch != 'e' {
+			break
+		}
+
+		// take note if it looks like a float
+		if ch == '.' || ch == 'e' {
+			isFloat = true
+		}
+
+		// add the character to our word and move to the next character
+		word += string(ch)
+		l.getRune()
 	}
 
 	// is the next character a "." or "e"? If so, it's a float.
-	if col < len(l.lineBuf) && (l.lineBuf[col] == '.' || l.lineBuf[col] == 'e') {
-		// it's a float, scan for the end
-		for col = l.pos.Column; col < len(l.lineBuf) && (unicode.IsDigit(l.lineBuf[col]) || l.lineBuf[col] == '.' || l.lineBuf[col] == 'e'); col++ {
-		}
-
+	if isFloat {
 		// parse the float
-		v, err := strconv.ParseFloat(string(l.lineBuf[l.pos.Column:col]), 128)
+		v, err := strconv.ParseFloat(word, 128)
 		if err != nil {
-			return err
+			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		l.pos.Column = col
-		l.out <- FloatToken{SrcSpan{l.startPos, l.pos}, TokenFloat64, v}
-		return nil
+		return FloatToken{l.pos, TokenFloat64, v}, nil
 	} else {
 		// it's an int, parse it
-		v, err := strconv.ParseUint(string(l.lineBuf[l.pos.Column:col]), 10, 64)
+		v, err := strconv.ParseUint(word, 10, 64)
 		if err != nil {
-			return err
+			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		l.pos.Column = col
-		l.out <- UintToken{SrcSpan{l.startPos, l.pos}, TokenUint, v}
-		return nil
+		return UintToken{l.pos, TokenUint, v}, nil
 	}
 }
 
 // getRuneLiteral gets a single character rune literal.
-// XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
-func (l *Lexer) getRuneLiteral() error {
-	if l.pos.Column+2 >= len(l.lineBuf) {
-		return errors.New("incomplete rune literal")
-	}
-	ch := l.lineBuf[l.pos.Column+1]
-	if l.lineBuf[l.pos.Column+2] != '\'' {
-		return errors.New("expected closing single quote in rune literal")
+func (l *Lexer) getRuneLiteral() (Token, error) {
+	// get it as a string literal
+	str, err := l.getStringLiteralSimple()
+	if err != nil {
+		return nil, err
 	}
 
-	l.pos.Column += 3
-	l.out <- UintToken{SrcSpan{l.startPos, l.pos}, TokenRune, uint64(ch)}
+	if len(str) != 1 {
+		return nil, NewError(l.sourceFile, l.pos, "this rune should be a single character")
+	}
 
-	return nil
+	return UintToken{l.pos, TokenRune, uint64(str[0])}, nil
 }
 
 // getStringLiteral gets a string literal.
+func (l *Lexer) getStringLiteral() (Token, error) {
+	// get the string literal
+	str, err := l.getStringLiteralSimple()
+	if err != nil {
+		return nil, err
+	}
+
+	// we're at the end of the string
+	return StringToken{l.pos, TokenString, string(str)}, nil
+}
+
+// getStringLiteralSimple gets a string literal, returning it as a []rune.
 // XXX - this is currently a quickie version. This should be reimplemented fully according to spec later.
-func (l *Lexer) getStringLiteral() error {
-	quote := l.lineBuf[l.pos.Column]
-	sCol := l.pos.Column + 1
-	var col int
+func (l *Lexer) getStringLiteralSimple() ([]rune, error) {
+	// get the open quote
+	quote, _ := l.getRune()
 
-	for col = sCol; col < len(l.lineBuf) && l.lineBuf[col] != quote; col++ {
+	// get characters until we find the closing quote
+	str := make([]rune, 0, initialStringStorage)
+	for {
+		ch, err := l.getRune()
+		if err != nil {
+			// just return what we've got
+			return nil, NewError(l.sourceFile, l.pos, "no closing quote")
+		}
+
+		if ch == quote {
+			// we're at the end of the string
+			return str, nil
+		}
+
+		// put it in the string
+		str = append(str, ch)
 	}
-
-	if col == len(l.lineBuf) {
-		return errors.New("no closing quote")
-	}
-
-	l.pos.Column = col + 1
-	l.out <- StringToken{SrcSpan{l.startPos, l.pos}, TokenString, string(l.lineBuf[sCol:col])}
-
-	return nil
 }

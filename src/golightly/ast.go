@@ -5,7 +5,8 @@ type ASTKind int
 
 const (
 	// operators
-	ASTKindExpr ASTKind = iota
+	ASTKindTopLevel ASTKind = iota
+	ASTKindExpr
 )
 
 // type AST is a "sum type" implemented using an interface.
@@ -15,6 +16,13 @@ const (
 // eg. StringToken{TokenIdentifier, "hello"}
 type AST interface {
 	ASTKind() ASTKind
+}
+
+type ASTTopLevel struct {
+}
+
+func (ast *ASTTopLevel) ASTKind() ASTKind {
+	return ASTKindExpr
 }
 
 type ASTExpr struct {
