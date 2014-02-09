@@ -109,8 +109,8 @@ type Token interface {
 }
 
 type SimpleToken struct {
-	pos    SrcSpan
-	tt     TokenKind
+	pos SrcSpan
+	tt  TokenKind
 }
 
 func (st SimpleToken) TokenKind() TokenKind {
@@ -122,7 +122,7 @@ func (st SimpleToken) Pos() SrcSpan {
 }
 
 type StringToken struct {
-	s SimpleToken
+	s      SimpleToken
 	strVal string
 }
 
@@ -135,7 +135,7 @@ func (st StringToken) Pos() SrcSpan {
 }
 
 type UintToken struct {
-	s SimpleToken
+	s       SimpleToken
 	uintVal uint64
 }
 
@@ -148,7 +148,7 @@ func (ut UintToken) Pos() SrcSpan {
 }
 
 type FloatToken struct {
-	s SimpleToken
+	s        SimpleToken
 	floatVal float64
 }
 
@@ -159,4 +159,3 @@ func (ft FloatToken) TokenKind() TokenKind {
 func (st FloatToken) Pos() SrcSpan {
 	return st.s.pos
 }
-

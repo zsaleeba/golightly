@@ -7,57 +7,85 @@ package golightly
 // eg. ValueString{"hello"}
 type Value interface {
 	isValue()
-	DataType() *DataType
+	DataType(ts *DataTypeStore) DataType
 }
 
 // type ValueInt is for signed integers
 type ValueInt struct {
-	typ *DataType
+	typ DataType
 	val int64
 }
 
-func (v *ValueInt) isValue() {
+func (v ValueInt) isValue() {
 }
 
-func (v *ValueInt) DataType() *DataType {
+func (v ValueInt) DataType(ts *DataTypeStore) DataType {
 	return v.typ
 }
 
 // type ValueUint is for unsigned integers
 type ValueUint struct {
-	typ *DataType
+	typ DataType
 	val uint64
 }
 
-func (v *ValueUint) isValue() {
+func (v ValueUint) isValue() {
 }
 
-func (v *ValueUint) DataType() *DataType {
+func (v ValueUint) DataType(ts *DataTypeStore) DataType {
+	return v.typ
+}
+
+// type ValueFloat is for floats
+type ValueFloat struct {
+	typ DataType
+	val float64
+}
+
+func (v ValueFloat) isValue() {
+}
+
+func (v ValueFloat) DataType(ts *DataTypeStore) DataType {
 	return v.typ
 }
 
 // type ValueRune is for runes
 type ValueRune struct {
-	typ *DataType
 	val rune
 }
 
-func (v *ValueRune) isValue() {
+func (v ValueRune) isValue() {
 }
 
-func (v *ValueRune) DataType() *DataType {
-	return v.typ
+func (v ValueRune) DataType(ts *DataTypeStore) DataType {
+	return ts.RuneType()
 }
 
 // type ValueString is for strings
 type ValueString struct {
-	typ *DataType
 	val string
 }
 
-func (v *ValueString) isValue() {
+func (v ValueString) isValue() {
 }
 
-func (v *ValueString) DataType() *DataType {
-	return v.typ
+func (v ValueString) DataType(ts *DataTypeStore) DataType {
+	return ts.StringType()
+}
+
+// NewValueFromToken creates a Value from a lexer Token. It assumes the
+// token is a literal value type.
+func NewValueFromToken(tok Token, ts *DataTypeStore) Value {
+	switch tok.TokenKind() {
+	case TokenUint:
+		return ValueUint{ts.UintType(), tok.(UintToken).uintVal}
+	case TokenFloat64:
+		return ValueFloat{ts.FloatType(), tok.(FloatToken).floatVal}
+	case TokenRune:
+		return ValueRune{rune(tok.(UintToken).uintVal)}
+	case TokenString:
+		return ValueString{tok.(StringToken).strVal}
+	}
+
+	return nil
 }

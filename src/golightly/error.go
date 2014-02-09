@@ -4,8 +4,8 @@ import "fmt"
 
 type Error struct {
 	filename string
-	pos SrcSpan
-	message string
+	pos      SrcSpan
+	message  string
 }
 
 func NewError(filename string, pos SrcSpan, message string) *Error {

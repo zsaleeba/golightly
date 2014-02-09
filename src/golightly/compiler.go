@@ -10,11 +10,15 @@ import (
 type Compiler struct {
 	files      map[string]SourceFile
 	filesMutex sync.Mutex
+
+	dataTypeStore *DataTypeStore
 }
 
 // NewCompiler creates a new compiler object.
 func NewCompiler() *Compiler {
 	c := new(Compiler)
+	c.dataTypeStore = NewDataTypeStore()
+
 	return c
 }
 

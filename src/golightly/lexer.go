@@ -1,12 +1,12 @@
 package golightly
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"unicode"
-	"io"
-	"bufio"
 )
 
 // a map of keywords for quick lookup
@@ -40,19 +40,19 @@ var keywords map[string]TokenKind = map[string]TokenKind{
 
 // the running state of the lexical analyser
 type Lexer struct {
-	sourceFile string // name of the source file
+	sourceFile string  // name of the source file
 	pos        SrcSpan // where we are in the source file
 
-	reader     *bufio.Reader // used to read the input file
-	nextRune   rune // the next rune in input
-	haveNextRune bool // true if we have a rune buffered in nextRune
-	longComment bool // true if we're in a C-style /*...*/ comment
-	prevStar   bool // true in a long comment if the previous character was an asterisk
-	ncNextRunes [ncNextRunesSize]rune // the next non-comment runes in input
-	ncNextRuneCount int // count of the number of items in ncNextRunes
+	reader          *bufio.Reader         // used to read the input file
+	nextRune        rune                  // the next rune in input
+	haveNextRune    bool                  // true if we have a rune buffered in nextRune
+	longComment     bool                  // true if we're in a C-style /*...*/ comment
+	prevStar        bool                  // true in a long comment if the previous character was an asterisk
+	ncNextRunes     [ncNextRunesSize]rune // the next non-comment runes in input
+	ncNextRuneCount int                   // count of the number of items in ncNextRunes
 
-	nextToken  Token  // the next token
-	haveNextToken bool // true if the have the next token ready
+	nextToken     Token // the next token
+	haveNextToken bool  // true if the have the next token ready
 }
 
 // the buffer size of the lexer output channel
@@ -333,7 +333,7 @@ func (l *Lexer) lexToken() (Token, error) {
 		}
 
 		// it must be an identifier
-		return StringToken{l.pos, TokenIdentifier, word}, nil
+		return StringToken{SimpleToken{l.pos, TokenIdentifier}, word}, nil
 	}
 
 	// is it a numeric literal?
@@ -590,7 +590,7 @@ func (l *Lexer) getNumeric() (Token, error) {
 			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		return FloatToken{l.pos, TokenFloat64, v}, nil
+		return FloatToken{SimpleToken{l.pos, TokenFloat64}, v}, nil
 	} else {
 		// it's an int, parse it
 		v, err := strconv.ParseUint(word, 10, 64)
@@ -598,7 +598,7 @@ func (l *Lexer) getNumeric() (Token, error) {
 			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		return UintToken{l.pos, TokenUint, v}, nil
+		return UintToken{SimpleToken{l.pos, TokenUint}, v}, nil
 	}
 }
 
@@ -614,7 +614,7 @@ func (l *Lexer) getRuneLiteral() (Token, error) {
 		return nil, NewError(l.sourceFile, l.pos, "this rune should be a single character")
 	}
 
-	return UintToken{l.pos, TokenRune, uint64(str[0])}, nil
+	return UintToken{SimpleToken{l.pos, TokenRune}, uint64(str[0])}, nil
 }
 
 // getStringLiteral gets a string literal.
@@ -626,7 +626,7 @@ func (l *Lexer) getStringLiteral() (Token, error) {
 	}
 
 	// we're at the end of the string
-	return StringToken{l.pos, TokenString, string(str)}, nil
+	return StringToken{SimpleToken{l.pos, TokenString}, string(str)}, nil
 }
 
 // getStringLiteralSimple gets a string literal, returning it as a []rune.

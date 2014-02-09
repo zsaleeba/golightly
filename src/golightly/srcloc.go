@@ -7,5 +7,5 @@ type SrcLoc struct {
 
 type SrcSpan struct {
 	start SrcLoc
-	end SrcLoc
+	end   SrcLoc
 }
