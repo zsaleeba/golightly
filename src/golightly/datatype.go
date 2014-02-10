@@ -87,14 +87,14 @@ func (dtu DataTypeStruct) DataTypeKind() DataTypeKind {
 // returns the same pointer so pointer comparison can be used on types.
 type DataTypeStore struct {
 	// a map of type names to types
-	nameMap map[string]DataType
+	nameMap      map[string]DataType
 	nameMapMutex sync.RWMutex
 
 	// standard types
-	intType DataType
-	uintType DataType
-	floatType DataType
-	runeType DataType
+	intType    DataType
+	uintType   DataType
+	floatType  DataType
+	runeType   DataType
 	stringType DataType
 }
 

@@ -25,9 +25,9 @@ func (ast ASTTopLevel) Pos() SrcSpan {
 }
 
 type ASTImport struct {
-	pos           SrcSpan // where the keyword is in the source
-	packageName   AST     // local package name to import as, or "." to import to the local scope.
-	importPath    AST     // the path to the package or local package name.
+	pos         SrcSpan // where the keyword is in the source
+	packageName AST     // local package name to import as, or "." to import to the local scope.
+	importPath  AST     // the path to the package or local package name.
 }
 
 func (ast ASTImport) IsAST() {
@@ -38,9 +38,9 @@ func (ast ASTImport) Pos() SrcSpan {
 }
 
 type ASTUnaryExpr struct {
-	pos           SrcSpan   // where it is in the source
-	op            TokenKind // what kind of operation it is
-	param         AST       // the parameter
+	pos   SrcSpan   // where it is in the source
+	op    TokenKind // what kind of operation it is
+	param AST       // the parameter
 }
 
 func (ast ASTUnaryExpr) IsAST() {
@@ -51,10 +51,10 @@ func (ast ASTUnaryExpr) Pos() SrcSpan {
 }
 
 type ASTBinaryExpr struct {
-	pos           SrcSpan   // where it is in the source
-	op            TokenKind // what kind of operation it is
-	left          AST       // the left parameter
-	right         AST       // the right parameter
+	pos   SrcSpan   // where it is in the source
+	op    TokenKind // what kind of operation it is
+	left  AST       // the left parameter
+	right AST       // the right parameter
 }
 
 func (ast ASTBinaryExpr) IsAST() {
@@ -65,8 +65,8 @@ func (ast ASTBinaryExpr) Pos() SrcSpan {
 }
 
 type ASTValue struct {
-	pos           SrcSpan   // where it is in the source
-	val           Value     // the value
+	pos SrcSpan // where it is in the source
+	val Value   // the value
 }
 
 func (ast ASTValue) IsAST() {
@@ -81,8 +81,8 @@ func NewASTValueFromToken(v Token, ts *DataTypeStore) ASTValue {
 }
 
 type ASTIdentifier struct {
-	pos           SrcSpan   // where it is in the source
-	name          string    // the identifier name
+	pos  SrcSpan // where it is in the source
+	name string  // the identifier name
 }
 
 func (ast ASTIdentifier) IsAST() {
@@ -105,9 +105,9 @@ func (ast ASTDataType) Pos() SrcSpan {
 }
 
 type ASTConstDecl struct {
-	ident         AST     // the variable to declare
-	typ           AST     // the optional data type
-	value         AST     // the value to set it to
+	ident AST // the variable to declare
+	typ   AST // the optional data type
+	value AST // the value to set it to
 }
 
 func (ast ASTConstDecl) IsAST() {
@@ -118,8 +118,8 @@ func (ast ASTConstDecl) Pos() SrcSpan {
 }
 
 type ASTDataTypeDecl struct {
-	ident         AST     // the variable to declare
-	typ           AST     // the data type
+	ident AST // the variable to declare
+	typ   AST // the data type
 }
 
 func (ast ASTDataTypeDecl) IsAST() {
@@ -130,9 +130,9 @@ func (ast ASTDataTypeDecl) Pos() SrcSpan {
 }
 
 type ASTVarDecl struct {
-	ident         AST     // the variable to declare
-	typ           AST     // the optional data type
-	value         AST     // the value to set it to
+	ident AST // the variable to declare
+	typ   AST // the optional data type
+	value AST // the value to set it to
 }
 
 func (ast ASTVarDecl) IsAST() {
@@ -141,4 +141,3 @@ func (ast ASTVarDecl) IsAST() {
 func (ast ASTVarDecl) Pos() SrcSpan {
 	return ast.ident.Pos()
 }
-

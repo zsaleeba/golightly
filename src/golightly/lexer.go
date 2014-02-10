@@ -51,8 +51,8 @@ type Lexer struct {
 	ncNextRunes     [ncNextRunesSize]rune // the next non-comment runes in input
 	ncNextRuneCount int                   // count of the number of items in ncNextRunes
 
-	nextTokens      [nextTokensSize]Token // the next tokens
-	nextTokenCount  int  // count of the number of items in nextTokens
+	nextTokens     [nextTokensSize]Token // the next tokens
+	nextTokenCount int                   // count of the number of items in nextTokens
 }
 
 // the buffer size of the lexer output channel
@@ -114,7 +114,7 @@ func (l *Lexer) getUntrackedRune() (rune, error) {
 		r := l.ncNextRunes[0]
 
 		// remove it from the buffer
-		for i := l.ncNextRuneCount-1; i > 0; i-- {
+		for i := l.ncNextRuneCount - 1; i > 0; i-- {
 			l.ncNextRunes[i-1] = l.ncNextRunes[i]
 		}
 		l.ncNextRuneCount--
@@ -294,7 +294,7 @@ func (l *Lexer) GetToken() (Token, error) {
 		t := l.nextTokens[0]
 
 		// remove it from the buffer
-		for i := l.nextTokenCount-1; i > 0; i-- {
+		for i := l.nextTokenCount - 1; i > 0; i-- {
 			l.nextTokens[i-1] = l.nextTokens[i]
 		}
 		l.nextTokens[l.nextTokenCount-1] = nil

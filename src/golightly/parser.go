@@ -6,8 +6,8 @@ import (
 
 // type Parser controls parsing of a token stream into an AST
 type Parser struct {
-	lexer *Lexer // the lexical analyser
-	ts *DataTypeStore // the data type store
+	lexer *Lexer         // the lexical analyser
+	ts    *DataTypeStore // the data type store
 
 	filename    string // the name of the file being parsed
 	packageName string // the name of the package this file is a part of
@@ -338,7 +338,6 @@ func (p *Parser) parseTypeSpec() ([]AST, error) {
 	return []AST{ASTDataTypeDecl{identAST, typ}}, nil
 }
 
-
 // parseVarSpec parses a variable declaration specification.
 // VarSpec     = IdentifierList ( Type [ "=" ExpressionList ] | "=" ExpressionList ) .
 func (p *Parser) parseVarSpec() ([]AST, error) {
@@ -510,7 +509,7 @@ func (p *Parser) parseMethodDecl() (AST, error) {
 // ConstDecl      = "const" ( ConstSpec | "(" { ConstSpec ";" } ")" ) .
 // TypeDecl       = "type"  ( TypeSpec  | "(" { TypeSpec  ";" } ")" ) .
 // VarDecl        = "var"   ( VarSpec   | "(" { VarSpec   ";" } ")" ) .
-func (p *Parser) parseDecl(parseSpec func()([]AST, error), verbName string) ([]AST, error) {
+func (p *Parser) parseDecl(parseSpec func() ([]AST, error), verbName string) ([]AST, error) {
 	// we already know it starts with the verb, so skip that
 	p.lexer.GetToken()
 
@@ -540,7 +539,7 @@ func (p *Parser) parseDecl(parseSpec func()([]AST, error), verbName string) ([]A
 
 // parseGroupSingle parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
-func (p *Parser) parseGroupSingle(parseClause func()(AST, error), verbName string) ([]AST, error) {
+func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName string) ([]AST, error) {
 	openBracketToken, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
@@ -583,7 +582,7 @@ func (p *Parser) parseGroupSingle(parseClause func()(AST, error), verbName strin
 
 // parseGroupMulti parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
-func (p *Parser) parseGroupMulti(parseClause func()([]AST, error), verbName string) ([]AST, error) {
+func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName string) ([]AST, error) {
 	openBracketToken, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
@@ -637,7 +636,6 @@ func (p *Parser) parseSemicolon(message string) error {
 
 	return nil
 }
-
 
 // parseExpression parses an expression.
 func (p *Parser) parseExpression() (AST, error) {
