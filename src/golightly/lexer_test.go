@@ -61,7 +61,7 @@ func TestLexerLexLine(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenUint(tl, 7, 6, TokenUint, 42)
+	err = checkTokenUint(tl, 7, 6, TokenLiteralInt, 42)
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,7 +81,7 @@ func TestLexerLexLine(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenFloat(tl, 8, 6, TokenFloat64, 7.2)
+	err = checkTokenFloat(tl, 8, 6, TokenLiteralFloat, 7.2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -101,7 +101,7 @@ func TestLexerLexLine(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = checkTokenUint(tl, 9, 6, TokenRune, uint64('X'))
+	err = checkTokenUint(tl, 9, 6, TokenLiteralRune, uint64('X'))
 	if err != nil {
 		t.Error(err)
 	}

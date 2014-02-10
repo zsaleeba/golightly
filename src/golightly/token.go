@@ -80,16 +80,35 @@ const (
 	TokenTypeKeyword
 	TokenVar
 
-	// literals
-	TokenString
-	TokenRune
-	TokenInt
+	// data type keywords
+	TokenBool
 	TokenUint
+	TokenUint8
+	TokenUint16
+	TokenUint32
+	TokenUint64
+	TokenUintPtr
+	TokenInt
+	TokenInt8
+	TokenInt16
+	TokenInt32
+	TokenInt64
 	TokenFloat32
 	TokenFloat64
+	TokenComplex64
+	TokenComplex128
+	TokenByte
+	TokenRune
+	TokenString
 
 	// identifiers
 	TokenIdentifier
+
+	// literals
+	TokenLiteralInt
+	TokenLiteralFloat
+	TokenLiteralRune
+	TokenLiteralString
 
 	// end of source code
 	TokenEndOfSource

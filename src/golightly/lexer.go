@@ -36,6 +36,26 @@ var keywords map[string]TokenKind = map[string]TokenKind{
 	"switch":      TokenSwitch,
 	"type":        TokenTypeKeyword,
 	"var":         TokenVar,
+
+	"bool":        TokenBool,
+	"uint":        TokenUint,
+	"uint8":       TokenUint8,
+	"uint16":      TokenUint16,
+	"uint32":      TokenUint32,
+	"uint64":      TokenUint64,
+	"uintptr":     TokenUintPtr,
+	"int":         TokenInt,
+	"int8":        TokenInt8,
+	"int16":       TokenInt16,
+	"int32":       TokenInt32,
+	"int64":       TokenInt64,
+	"float32":     TokenFloat32,
+	"float64":     TokenFloat64,
+	"complex64":   TokenComplex64,
+	"complex128":  TokenComplex128,
+	"byte":        TokenByte,
+	"rune":        TokenRune,
+	"string":      TokenString,
 }
 
 // the running state of the lexical analyser
@@ -613,7 +633,7 @@ func (l *Lexer) getNumeric() (Token, error) {
 			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		return FloatToken{SimpleToken{l.pos, TokenFloat64}, v}, nil
+		return FloatToken{SimpleToken{l.pos, TokenLiteralFloat}, v}, nil
 	} else {
 		// it's an int, parse it
 		v, err := strconv.ParseUint(word, 10, 64)
@@ -621,7 +641,7 @@ func (l *Lexer) getNumeric() (Token, error) {
 			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		return UintToken{SimpleToken{l.pos, TokenUint}, v}, nil
+		return UintToken{SimpleToken{l.pos, TokenLiteralInt}, v}, nil
 	}
 }
 
@@ -637,7 +657,7 @@ func (l *Lexer) getRuneLiteral() (Token, error) {
 		return nil, NewError(l.sourceFile, l.pos, "this rune should be a single character")
 	}
 
-	return UintToken{SimpleToken{l.pos, TokenRune}, uint64(str[0])}, nil
+	return UintToken{SimpleToken{l.pos, TokenLiteralRune}, uint64(str[0])}, nil
 }
 
 // getStringLiteral gets a string literal.
@@ -649,7 +669,7 @@ func (l *Lexer) getStringLiteral() (Token, error) {
 	}
 
 	// we're at the end of the string
-	return StringToken{SimpleToken{l.pos, TokenString}, string(str)}, nil
+	return StringToken{SimpleToken{l.pos, TokenLiteralString}, string(str)}, nil
 }
 
 // getStringLiteralSimple gets a string literal, returning it as a []rune.
