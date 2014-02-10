@@ -42,8 +42,8 @@ const (
 	TokenGreaterEqual
 	TokenDeclareAssign
 	TokenEllipsis
-	TokenOpenGroup
-	TokenCloseGroup
+	TokenOpenBracket
+	TokenCloseBracket
 	TokenOpenOption
 	TokenCloseOption
 	TokenOpenBlock

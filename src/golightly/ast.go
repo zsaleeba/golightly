@@ -91,3 +91,18 @@ func (ast ASTIdentifier) IsAST() {
 func (ast ASTIdentifier) Pos() SrcSpan {
 	return ast.pos
 }
+
+type ASTConst struct {
+	pos           SrcSpan // where the keyword is in the source
+	ident         AST     // the variable to declare
+	typ           AST     // the optional data type
+	value         AST     // the value to set it to
+}
+
+func (ast ASTConst) IsAST() {
+}
+
+func (ast ASTConst) Pos() SrcSpan {
+	return ast.pos
+}
+

@@ -51,14 +51,15 @@ type Lexer struct {
 	ncNextRunes     [ncNextRunesSize]rune // the next non-comment runes in input
 	ncNextRuneCount int                   // count of the number of items in ncNextRunes
 
-	nextToken     Token // the next token
-	haveNextToken bool  // true if the have the next token ready
+	nextTokens      [nextTokensSize]Token // the next tokens
+	nextTokenCount  int  // count of the number of items in nextTokens
 }
 
 // the buffer size of the lexer output channel
 const lexerTokenChannelBuffers = 5
 const tokenBufSize = 64
 const ncNextRunesSize = 3
+const nextTokensSize = 2
 const initialStringStorage = 80
 
 // NewLexer creates a new lexer object
@@ -72,7 +73,7 @@ func NewLexer() *Lexer {
 func (l *Lexer) Init(filename string) {
 	l.pos = SrcSpan{SrcLoc{1, 1}, SrcLoc{1, 1}}
 	l.sourceFile = filename
-	l.haveNextToken = false
+	l.nextTokenCount = 0
 	l.haveNextRune = false
 	l.ncNextRuneCount = 0
 	l.longComment = false
@@ -107,6 +108,20 @@ func (l *Lexer) getBufferedRune() (rune, error) {
 // getUntrackedRune gets a rune while removing comments from the stream.
 // it doesn't change the line/column tracking.
 func (l *Lexer) getUntrackedRune() (rune, error) {
+	// do we have a buffered rune with comments already removed?
+	if l.ncNextRuneCount > 0 {
+		// get it from the nc (non-commented) buffer
+		r := l.ncNextRunes[0]
+
+		// remove it from the buffer
+		for i := l.ncNextRuneCount-1; i > 0; i-- {
+			l.ncNextRunes[i-1] = l.ncNextRunes[i]
+		}
+		l.ncNextRuneCount--
+
+		return r, nil
+	}
+
 	// get a rune
 	r, err := l.getBufferedRune()
 	if err != nil {
@@ -273,34 +288,42 @@ func (l *Lexer) skipWhitespace() error {
 // GetToken gets the next token from the buffer.
 // returns the token and an error.
 func (l *Lexer) GetToken() (Token, error) {
-	if l.haveNextToken {
-		// use the token we already have
-		l.haveNextToken = false
-		return l.nextToken, nil
-	} else {
-		// lex a token
-		return l.lexToken()
+	// do we have a buffered token?
+	if l.nextTokenCount > 0 {
+		// get it from the buffer
+		t := l.nextTokens[0]
+
+		// remove it from the buffer
+		for i := l.nextTokenCount-1; i > 0; i-- {
+			l.nextTokens[i-1] = l.nextTokens[i]
+		}
+		l.nextTokens[l.nextTokenCount-1] = nil
+		l.nextTokenCount--
+
+		return t, nil
 	}
+
+	return l.lexToken()
 }
 
 // PeekToken returns the next token from the line buffer without removing it.
 // returns the token and an error.
-func (l *Lexer) PeekToken() (Token, error) {
-	if l.haveNextToken {
-		// return the token we already have
-		return l.nextToken, nil
-	} else {
-		// lex a token
+func (l *Lexer) PeekToken(ahead int) (Token, error) {
+	// make sure the nextTokens buffer is full enough
+	for l.nextTokenCount <= ahead {
+		// get a token
 		t, err := l.lexToken()
 		if err != nil {
-			return t, err
+			return nil, err
 		}
 
 		// buffer it
-		l.haveNextToken = true
-		l.nextToken = t
-		return t, nil
+		l.nextTokens[l.nextTokenCount] = t
+		l.nextTokenCount++
 	}
+
+	// return it
+	return l.nextTokens[ahead], nil
 }
 
 // lexToken gets the next token from the line buffer.
@@ -514,9 +537,9 @@ func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 	case ',': // ','
 		return TokenComma, 1, true
 	case '(': // '('
-		return TokenOpenGroup, 1, true
+		return TokenOpenBracket, 1, true
 	case ')': // ')'
-		return TokenCloseGroup, 1, true
+		return TokenCloseBracket, 1, true
 	case '[': // '['
 		return TokenOpenOption, 1, true
 	case ']': // ']'
