@@ -250,6 +250,39 @@ func (p *Parser) parseTopLevelDecl() (bool, []AST, error) {
 	}
 }
 
+// parseDecl parses a declaration. It's used for const, type and var
+// declarations since they're all fairly similar.
+// ConstDecl      = "const" ( ConstSpec | "(" { ConstSpec ";" } ")" ) .
+// TypeDecl       = "type"  ( TypeSpec  | "(" { TypeSpec  ";" } ")" ) .
+// VarDecl        = "var"   ( VarSpec   | "(" { VarSpec   ";" } ")" ) .
+func (p *Parser) parseDecl(parseSpec func() ([]AST, error), verbName string) ([]AST, error) {
+	// we already know it starts with the verb, so skip that
+	p.lexer.GetToken()
+
+	// is it a '(' next?
+	bracketToken, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	var decls []AST
+	if bracketToken.TokenKind() == TokenOpenBracket {
+		// it's a group of specs
+		decls, err = p.parseGroupMulti(parseSpec, verbName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// it's a single spec
+		decls, err = parseSpec()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return decls, nil
+}
+
 // parseConstSpec parses a constant spec.
 // ConstSpec      = IdentifierList [ [ Type ] "=" ExpressionList ] .
 func (p *Parser) parseConstSpec() ([]AST, error) {
@@ -489,52 +522,53 @@ func (p *Parser) parseFunctionDecl() (AST, error) {
 	// we already know it starts with "func"
 	funcToken, _ := p.lexer.GetToken()
 
-	//
+	// get an identifier for the function name
+	ident, err := p.lexer.GetToken()
+	if err != nil {
+		return nil, err
+	}
+
+	if ident.TokenKind() != TokenIdentifier {
+		return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a function name, but it's not"))
+	}
+
+	// get a function or a signature
+
 	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
 }
 
 // parseMethodDecl parses a method declaration. Note that "func" will
 // already have been consumed so we're starting from the Receiver.
 // MethodDecl   = "func" Receiver MethodName ( Function | Signature ) .
+// Receiver     = "(" [ identifier ] [ "*" ] BaseTypeName ")" .
 func (p *Parser) parseMethodDecl() (AST, error) {
 	// we already know it starts with "func"
 	funcToken, _ := p.lexer.GetToken()
 
-	//
+	// get the receiver
+
 	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
 }
 
-// parseDecl parses a declaration. It's used for const, type and var
-// declarations since they're all fairly similar.
-// ConstDecl      = "const" ( ConstSpec | "(" { ConstSpec ";" } ")" ) .
-// TypeDecl       = "type"  ( TypeSpec  | "(" { TypeSpec  ";" } ")" ) .
-// VarDecl        = "var"   ( VarSpec   | "(" { VarSpec   ";" } ")" ) .
-func (p *Parser) parseDecl(parseSpec func() ([]AST, error), verbName string) ([]AST, error) {
-	// we already know it starts with the verb, so skip that
-	p.lexer.GetToken()
+// parseFunction parses a function definition.
+// Function     = Signature FunctionBody .
+// FunctionBody = Block .
+func (p *Parser) parseFunction() (AST, error) {
+	// we already know it starts with "func"
+	funcToken, _ := p.lexer.GetToken()
 
-	// is it a '(' next?
-	bracketToken, err := p.lexer.PeekToken(0)
-	if err != nil {
-		return nil, err
-	}
+	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
+}
 
-	var decls []AST
-	if bracketToken.TokenKind() == TokenOpenBracket {
-		// it's a group of specs
-		decls, err = p.parseGroupMulti(parseSpec, verbName)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// it's a single spec
-		decls, err = parseSpec()
-		if err != nil {
-			return nil, err
-		}
-	}
+// parseSignature parses a function signature.
+// Signature      = Parameters [ Result ] .
+// Result         = Parameters | Type .
+// Parameters     = "(" [ ParameterList [ "," ] ] ")" .
+func (p *Parser) parseSignature() (AST, error) {
+	// we already know it starts with "func"
+	funcToken, _ := p.lexer.GetToken()
 
-	return decls, nil
+	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
 }
 
 // parseGroupSingle parses a group of some other clause, surrounded by brackets and
@@ -635,17 +669,4 @@ func (p *Parser) parseSemicolon(message string) error {
 	}
 
 	return nil
-}
-
-// parseExpression parses an expression.
-func (p *Parser) parseExpression() (AST, error) {
-	tok, _ := p.lexer.GetToken()
-	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
-}
-
-// parseDataType parses a data type.
-// if no data type is present, the first return value is false.
-func (p *Parser) parseDataType() (bool, AST, error) {
-	tok, _ := p.lexer.GetToken()
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
