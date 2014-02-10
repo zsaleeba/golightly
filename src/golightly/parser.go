@@ -1,6 +1,8 @@
 package golightly
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // type Parser controls parsing of a token stream into an AST
 type Parser struct {
@@ -149,7 +151,7 @@ func (p *Parser) parseImport() ([]AST, error) {
 	}
 	if nextToken.TokenKind() == TokenOpenBracket {
 		// get a series of import specs
-		imports, err := p.parseGroup(p.parseImportSpec, "import")
+		imports, err := p.parseGroupSingle(p.parseImportSpec, "import")
 		if err != nil {
 			return nil, err
 		}
@@ -216,15 +218,15 @@ func (p *Parser) parseTopLevelDecl() (bool, []AST, error) {
 
 	switch nextToken.TokenKind() {
 	case TokenConst:
-		asts, err := p.parseConstDecl()
+		asts, err := p.parseDecl(p.parseConstSpec, "const")
 		return true, asts, err
 
 	case TokenTypeKeyword:
-		asts, err := p.parseTypeDecl()
+		asts, err := p.parseDecl(p.parseTypeSpec, "type")
 		return true, asts, err
 
 	case TokenVar:
-		asts, err := p.parseVarDecl()
+		asts, err := p.parseDecl(p.parseVarSpec, "var")
 		return true, asts, err
 
 	case TokenFunc:
@@ -248,44 +250,11 @@ func (p *Parser) parseTopLevelDecl() (bool, []AST, error) {
 	}
 }
 
-// parseConstDecl parses a constant declaration.
-// ConstDecl      = "const" ( ConstSpec | "(" { ConstSpec ";" } ")" ) .
-func (p *Parser) parseConstDecl() ([]AST, error) {
-	// we already know it starts with "const"
-	p.lexer.GetToken()
-
-	// is it a '(' next?
-	bracketToken, err := p.lexer.PeekToken(0)
-	if err != nil {
-		return nil, err
-	}
-
-	var decls []AST
-	if bracketToken.TokenKind() == TokenOpenBracket {
-		// it's a group of const specs
-		decls, err = p.parseGroup(p.parseConstSpec, "const")
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// it's a single const spec
-		decl, err := p.parseConstSpec()
-		if err != nil {
-			return nil, err
-		}
-
-		decls = []AST{decl}
-	}
-
-	return decls, nil
-}
-
 // parseConstSpec parses a constant spec.
 // ConstSpec      = IdentifierList [ [ Type ] "=" ExpressionList ] .
-func (p *Parser) parseConstSpec() (AST, error) {
-/*
+func (p *Parser) parseConstSpec() ([]AST, error) {
 	// get the identifier list
-	identList, err := p.parseIdentifierList()
+	identList, err := p.parseIdentifierList("constant")
 	if err != nil {
 		return nil, err
 	}
@@ -297,13 +266,13 @@ func (p *Parser) parseConstSpec() (AST, error) {
 	}
 
 	// maybe an equals?
-	var exprList []AST
 	equalsToken, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
 	}
 
 	// handle optional part
+	var exprList []AST
 	if matchTyp || equalsToken.TokenKind() == TokenEquals {
 		// there must be an '=' and expression list after a type
 		if equalsToken.TokenKind() != TokenEquals {
@@ -318,34 +287,200 @@ func (p *Parser) parseConstSpec() (AST, error) {
 		}
 	}
 
-	// make a const out of all this
-	XXX
-	 */
-	// we already know it starts with "var"
-	constToken, _ := p.lexer.GetToken()
+	// are the two lists the same length?
+	identSpan := identList[0].Pos().Add(identList[len(identList)-1].Pos())
+	if len(identList) > len(exprList) {
+		return nil, NewError(p.filename, identSpan, "there are more names here than there are values")
+	} else if len(identList) < len(exprList) {
+		return nil, NewError(p.filename, identSpan, "there are less names here than there are values")
+	}
 
-	//
-	return nil, NewError(p.filename, constToken.Pos(), "unimplemented")
+	// make a set of consts out of all this
+	asts := make([]AST, len(identList))
+	for i := 0; i < len(identList); i++ {
+		asts[i] = ASTConstDecl{identList[i], typ, exprList[i]}
+	}
+
+	return asts, nil
 }
 
-// parseTypeDecl parses a type declaration.
-// TypeDecl     = "type" ( TypeSpec | "(" { TypeSpec ";" } ")" ) .
-func (p *Parser) parseTypeDecl() ([]AST, error) {
-	// we already know it starts with "type"
-	typeToken, _ := p.lexer.GetToken()
+// parseTypeSpec parses a type declaration specification.
+// TypeSpec     = identifier Type .
+func (p *Parser) parseTypeSpec() ([]AST, error) {
+	// get an identifier
+	ident, err := p.lexer.GetToken()
+	if err != nil {
+		return nil, err
+	}
 
-	//
-	return nil, NewError(p.filename, typeToken.Pos(), "unimplemented")
+	if ident.TokenKind() != TokenIdentifier {
+		return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a name for a type, but it's not"))
+	}
+
+	identAST := ASTIdentifier{ident.Pos(), ident.(StringToken).strVal}
+
+	// get the data type
+	matchTyp, typ, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+
+	// the type is mandatory here
+	if !matchTyp {
+		fail, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, NewError(p.filename, fail.Pos(), fmt.Sprint("this should have been a name for a type, but it's not"))
+	}
+
+	return []AST{ASTDataTypeDecl{identAST, typ}}, nil
 }
 
-// parseVarDecl parses a variable declaration.
-// VarDecl     = "var" ( VarSpec | "(" { VarSpec ";" } ")" ) .
-func (p *Parser) parseVarDecl() ([]AST, error) {
-	// we already know it starts with "var"
-	varToken, _ := p.lexer.GetToken()
 
-	//
-	return nil, NewError(p.filename, varToken.Pos(), "unimplemented")
+// parseVarSpec parses a variable declaration specification.
+// VarSpec     = IdentifierList ( Type [ "=" ExpressionList ] | "=" ExpressionList ) .
+func (p *Parser) parseVarSpec() ([]AST, error) {
+	// get the identifier list
+	identList, err := p.parseIdentifierList("variable")
+	if err != nil {
+		return nil, err
+	}
+
+	// is there a data type following?
+	matchTyp, typ, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+
+	var exprList []AST
+	if matchTyp {
+		// optional equals
+		equalsToken, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if equalsToken.TokenKind() == TokenEquals {
+			// get the expression list
+			p.lexer.GetToken()
+			exprList, err = p.parseExpressionList()
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// required equals
+		equalsToken, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if equalsToken.TokenKind() != TokenEquals {
+			return nil, NewError(p.filename, equalsToken.Pos(), "I was expecting to see an '=' here")
+		}
+
+		// get the expression list
+		p.lexer.GetToken()
+		exprList, err = p.parseExpressionList()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// are the two lists the same length?
+	if exprList != nil {
+		identSpan := identList[0].Pos().Add(identList[len(identList)-1].Pos())
+
+		if len(identList) > len(exprList) {
+			return nil, NewError(p.filename, identSpan, "there are more names here than there are values")
+		} else if len(identList) < len(exprList) {
+			return nil, NewError(p.filename, identSpan, "there are less names here than there are values")
+		}
+	}
+
+	// make a set of variable declarations out of all this
+	asts := make([]AST, len(identList))
+	for i := 0; i < len(identList); i++ {
+		asts[i] = ASTVarDecl{identList[i], typ, exprList[i]}
+	}
+
+	return asts, nil
+}
+
+// parseIdentifierList parses a comma-separated list of identifiers.
+// IdentifierList = identifier { "," identifier } .
+func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
+	var asts []AST
+
+	for {
+		// get an identifier
+		ident, err := p.lexer.GetToken()
+		if err != nil {
+			return nil, err
+		}
+
+		if ident.TokenKind() != TokenIdentifier {
+			return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a name for a ", identDesc, ", but it's not"))
+		}
+
+		// add the identifier to our list of identifiers
+		asts = append(asts, ASTIdentifier{ident.Pos(), ident.(StringToken).strVal})
+
+		// look for a comma after it
+		comma, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if comma.TokenKind() != TokenComma {
+			break
+		}
+
+		p.lexer.GetToken()
+	}
+
+	return asts, nil
+}
+
+// parseExpressionList parses a comma-separated list of expressions.
+// ExpressionList = Expression { "," Expression } .
+func (p *Parser) parseExpressionList() ([]AST, error) {
+	// get an expression
+	expr, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	asts := []AST{expr}
+
+	// get more commas then expressions
+	for {
+		// look for a comma
+		comma, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if comma.TokenKind() != TokenComma {
+			break
+		}
+
+		p.lexer.GetToken()
+
+		// get an expression
+		expr, err = p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+
+		// add the identifier to our list of identifiers
+		asts = append(asts, expr)
+
+	}
+
+	return asts, nil
 }
 
 // parseFunctionDecl parses a function declaration. Note that "func" will
@@ -370,9 +505,42 @@ func (p *Parser) parseMethodDecl() (AST, error) {
 	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
 }
 
-// parseGroup parses a group of some other clause, surrounded by brackets and
+// parseDecl parses a declaration. It's used for const, type and var
+// declarations since they're all fairly similar.
+// ConstDecl      = "const" ( ConstSpec | "(" { ConstSpec ";" } ")" ) .
+// TypeDecl       = "type"  ( TypeSpec  | "(" { TypeSpec  ";" } ")" ) .
+// VarDecl        = "var"   ( VarSpec   | "(" { VarSpec   ";" } ")" ) .
+func (p *Parser) parseDecl(parseSpec func()([]AST, error), verbName string) ([]AST, error) {
+	// we already know it starts with the verb, so skip that
+	p.lexer.GetToken()
+
+	// is it a '(' next?
+	bracketToken, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	var decls []AST
+	if bracketToken.TokenKind() == TokenOpenBracket {
+		// it's a group of specs
+		decls, err = p.parseGroupMulti(parseSpec, verbName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// it's a single spec
+		decls, err = parseSpec()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return decls, nil
+}
+
+// parseGroupSingle parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
-func (p *Parser) parseGroup(parseClause func()(AST, error), verbName string) ([]AST, error) {
+func (p *Parser) parseGroupSingle(parseClause func()(AST, error), verbName string) ([]AST, error) {
 	openBracketToken, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
@@ -413,6 +581,49 @@ func (p *Parser) parseGroup(parseClause func()(AST, error), verbName string) ([]
 	return asts, nil
 }
 
+// parseGroupMulti parses a group of some other clause, surrounded by brackets and
+// with semicolons after each entry.
+func (p *Parser) parseGroupMulti(parseClause func()([]AST, error), verbName string) ([]AST, error) {
+	openBracketToken, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+	if openBracketToken.TokenKind() != TokenOpenBracket {
+		return nil, NewError(p.filename, openBracketToken.Pos(), "there should be a '(' here")
+	}
+
+	// get a series of sub-clauses
+	p.lexer.GetToken()
+	var asts []AST
+	semiErrorMessage := fmt.Sprint("I really wanted a semicolon between these '", verbName, "'s")
+	for {
+		// is it a terminating ')'?
+		closeBracketToken, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+		if closeBracketToken.TokenKind() == TokenCloseBracket {
+			break
+		}
+
+		// parse a sub-clause
+		newClauses, err := parseClause()
+		if err != nil {
+			return nil, err
+		}
+
+		// get a semicolon separator
+		err = p.parseSemicolon(semiErrorMessage)
+		if err != nil {
+			return nil, err
+		}
+
+		asts = append(asts, newClauses...)
+	}
+
+	return asts, nil
+}
+
 // parseSemicolon parses a required semicolon
 func (p *Parser) parseSemicolon(message string) error {
 	// get a semicolon separator
@@ -425,4 +636,18 @@ func (p *Parser) parseSemicolon(message string) error {
 	}
 
 	return nil
+}
+
+
+// parseExpression parses an expression.
+func (p *Parser) parseExpression() (AST, error) {
+	tok, _ := p.lexer.GetToken()
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+}
+
+// parseDataType parses a data type.
+// if no data type is present, the first return value is false.
+func (p *Parser) parseDataType() (bool, AST, error) {
+	tok, _ := p.lexer.GetToken()
+	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }

@@ -92,17 +92,53 @@ func (ast ASTIdentifier) Pos() SrcSpan {
 	return ast.pos
 }
 
-type ASTConst struct {
-	pos           SrcSpan // where the keyword is in the source
+type ASTDataType struct {
+	pos SrcSpan  // where it is in the source
+	typ DataType // what data type it is
+}
+
+func (ast ASTDataType) IsAST() {
+}
+
+func (ast ASTDataType) Pos() SrcSpan {
+	return ast.pos
+}
+
+type ASTConstDecl struct {
 	ident         AST     // the variable to declare
 	typ           AST     // the optional data type
 	value         AST     // the value to set it to
 }
 
-func (ast ASTConst) IsAST() {
+func (ast ASTConstDecl) IsAST() {
 }
 
-func (ast ASTConst) Pos() SrcSpan {
-	return ast.pos
+func (ast ASTConstDecl) Pos() SrcSpan {
+	return ast.ident.Pos()
+}
+
+type ASTDataTypeDecl struct {
+	ident         AST     // the variable to declare
+	typ           AST     // the data type
+}
+
+func (ast ASTDataTypeDecl) IsAST() {
+}
+
+func (ast ASTDataTypeDecl) Pos() SrcSpan {
+	return ast.ident.Pos()
+}
+
+type ASTVarDecl struct {
+	ident         AST     // the variable to declare
+	typ           AST     // the optional data type
+	value         AST     // the value to set it to
+}
+
+func (ast ASTVarDecl) IsAST() {
+}
+
+func (ast ASTVarDecl) Pos() SrcSpan {
+	return ast.ident.Pos()
 }
 
