@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/src/gl/gl.iml" filepath="$PROJECT_DIR$/src/gl/gl.iml" />
       <module fileurl="file://$PROJECT_DIR$/golightly.iml" filepath="$PROJECT_DIR$/golightly.iml" />
     </modules>
   </component>
