@@ -5,73 +5,108 @@ package golightly
 // Type      = TypeName | TypeLit | "(" Type ")" .
 // TypeLit   = ArrayType | StructType | PointerType | FunctionType | InterfaceType |
 //             SliceType | MapType | ChannelType .
-func (p *Parser) parseDataType() (bool, AST, error) {
+// TypeName  = identifier | QualifiedIdent .
+func (p *Parser) parseDataType() (bool, DataType, error) {
 	// what token do we have?
 	tok, _ := p.lexer.PeekToken(0)
 
+	var typ DataType
+	var err error
+
 	switch tok.TokenKind() {
 	case TokenIdentifier:
-		return p.parseDataTypeName()
+		ast, err := p.parseOptionallyQualifiedIdentifier()
+		if err != nil {
+			return false, nil, err
+		}
+
+		// we create a temporary type which is just an AST of the identifier. We'll resolve it later.
+		typ = p.ts.MakeASTType(ast)
 
 	case TokenOpenSquareBracket:
-		return p.parseDataTypeArray()
+		typ, err = p.parseDataTypeArray()
 
 	case TokenStruct:
-		return p.parseDataTypeStruct()
+		typ, err = p.parseDataTypeStruct()
 
 	case TokenAsterisk:
-		return p.parseDataTypePointer()
+		typ, err = p.parseDataTypePointer()
 
 	case TokenFunc:
-		return p.parseDataTypeFunction()
+		typ, err = p.parseDataTypeFunction()
 
 	case TokenInterface:
-		return p.parseDataTypeInterface()
+		typ, err = p.parseDataTypeInterface()
 
 	case TokenMap:
-		return p.parseDataTypeMap()
+		typ, err = p.parseDataTypeMap()
 
 	case TokenChan:
-		return p.parseDataTypeChannel()
+		typ, err = p.parseDataTypeChannel()
 
 	case TokenOpenBracket:
-		p.lexer.GetToken()
-		match, ast, err := p.parseDataType()
-		if err != nil {
-			return match, nil, err
-		}
-
-		err = p.expectToken(TokenCloseBracket, "I need a ')' here to finish the data type")
-		if err != nil {
-			return match, nil, err
-		}
-
-		return match, ast, nil
+		typ, err = p.parseDataTypeBracketed()
 
 	default:
 		return false, nil, nil
 	}
+
+	return true, typ, err
 }
 
-// parseDataType parses a data type name.
-// TypeName  = identifier | QualifiedIdent .
-func (p *Parser) parseDataTypeName() (bool, AST, error) {
-	ast, err := p.parseOptionallyQualifiedIdentifier()
-	if err != nil {
-		return false, nil, err
-	}
-
-	return true, ast, nil
-}
-
-// parseDataTypeArray parses an array data type.
+// parseDataTypeArray parses an array data type or a slice data type.
 // ArrayType   = "[" ArrayLength "]" ElementType .
 // ArrayLength = Expression .
 // ElementType = Type .
 // SliceType = "[" "]" ElementType .
-func (p *Parser) parseDataTypeArray() (bool, AST, error) {
-	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+func (p *Parser) parseDataTypeArray() (DataType, error) {
+	// we already know is starts with '['
+	p.lexer.GetToken()
+
+	// is the next character a ']'?
+	tok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+	var arrayLength AST
+	if tok.TokenKind() != TokenCloseSquareBracket {
+		// it's an array length
+		arrayLength, err = p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// it should be followed by a closing ']'
+	err = p.expectToken(TokenCloseSquareBracket, "you need a ']' here")
+	if err != nil {
+		return nil, err
+	}
+
+	// now get the element type
+	tok, err = p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+	match, elementType, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, tok.Pos(), "I was looking for a data type here, but sadly I didn't get one")
+	}
+
+	// make the new data type
+	var typ DataType
+	if arrayLength == nil {
+		// it's a slice
+		typ = p.ts.MakeSlice(elementType)
+	} else {
+		// it's an array
+		typ = p.ts.MakeArray(arrayLength, elementType)
+	}
+
+	return typ, nil
 }
 
 // parseDataTypeStruct parses a struct data type.
@@ -79,17 +114,17 @@ func (p *Parser) parseDataTypeArray() (bool, AST, error) {
 // FieldDecl      = (IdentifierList Type | AnonymousField) [ Tag ] .
 // AnonymousField = [ "*" ] TypeName .
 // Tag            = string_lit .
-func (p *Parser) parseDataTypeStruct() (bool, AST, error) {
+func (p *Parser) parseDataTypeStruct() (DataType, error) {
 	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypePointer parses a pointer data type.
 // PointerType = "*" BaseType .
 // BaseType = Type .
-func (p *Parser) parseDataTypePointer() (bool, AST, error) {
+func (p *Parser) parseDataTypePointer() (DataType, error) {
 	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypeFunction parses a function data type.
@@ -99,9 +134,9 @@ func (p *Parser) parseDataTypePointer() (bool, AST, error) {
 // Parameters     = "(" [ ParameterList [ "," ] ] ")" .
 // ParameterList  = ParameterDecl { "," ParameterDecl } .
 // ParameterDecl  = [ IdentifierList ] [ "..." ] Type .
-func (p *Parser) parseDataTypeFunction() (bool, AST, error) {
+func (p *Parser) parseDataTypeFunction() (DataType, error) {
 	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypeInterface parses an interface data type.
@@ -109,22 +144,50 @@ func (p *Parser) parseDataTypeFunction() (bool, AST, error) {
 // MethodSpec         = MethodName Signature | InterfaceTypeName .
 // MethodName         = identifier .
 // InterfaceTypeName  = TypeName .
-func (p *Parser) parseDataTypeInterface() (bool, AST, error) {
+func (p *Parser) parseDataTypeInterface() (DataType, error) {
 	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypeMap parses a map data type.
 // MapType     = "map" "[" KeyType "]" ElementType .
 // KeyType     = Type .
-func (p *Parser) parseDataTypeMap() (bool, AST, error) {
+func (p *Parser) parseDataTypeMap() (DataType, error) {
 	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypeChannel parses a channel data type.
 // ChannelType = ( "chan" [ "<-" ] | "<-" "chan" ) ElementType .
-func (p *Parser) parseDataTypeChannel() (bool, AST, error) {
+func (p *Parser) parseDataTypeChannel() (DataType, error) {
 	tok, _ := p.lexer.PeekToken(0)
-	return false, nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+}
+
+// parseDataTypeBracketed parses a data type enclosed by brackets.
+func (p *Parser) parseDataTypeBracketed() (DataType, error) {
+	// absorb the open bracket
+	p.lexer.GetToken()
+
+	// get the data type
+	tok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	match, typ, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, tok.Pos(), "by my reckoning this should have been a data type")
+	}
+
+	// get the close bracket
+	err = p.expectToken(TokenCloseBracket, "I need a ')' here to finish the data type")
+	if err != nil {
+		return nil, err
+	}
+
+	return typ, err
 }

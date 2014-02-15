@@ -303,7 +303,7 @@ func (p *Parser) parseConstSpec() ([]AST, error) {
 	if matchTyp || equalsToken.TokenKind() == TokenEquals {
 		// there must be an '=' and expression list after a type
 		if equalsToken.TokenKind() != TokenEquals {
-			return nil, NewError(p.filename, typ.Pos(), "this should really be followed by '='")
+			return nil, NewError(p.filename, equalsToken.Pos(), "after a data type I expected to see '=' here")
 		}
 
 		// get the expression list

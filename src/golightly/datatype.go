@@ -136,3 +136,16 @@ func (ts *DataTypeStore) RuneType() DataType {
 func (ts *DataTypeStore) StringType() DataType {
 	return ts.stringType
 }
+
+// methods to create types from other types
+func (ts *DataTypeStore) MakeSlice(subType DataType) DataType {
+	return nil
+}
+
+func (ts *DataTypeStore) MakeArray(arrayLength AST, subType DataType) DataType {
+	return nil
+}
+
+func (ts *DataTypeStore) MakeASTType(ast AST) DataType {
+	return nil
+}
