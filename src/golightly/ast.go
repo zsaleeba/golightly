@@ -81,8 +81,9 @@ func NewASTValueFromToken(v Token, ts *DataTypeStore) ASTValue {
 }
 
 type ASTIdentifier struct {
-	pos  SrcSpan // where it is in the source
-	name string  // the identifier name
+	pos         SrcSpan // where it is in the source
+	packageName string  // what package it's in
+	name        string  // the identifier name
 }
 
 func (ast ASTIdentifier) IsAST() {

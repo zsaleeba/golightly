@@ -37,25 +37,25 @@ var keywords map[string]TokenKind = map[string]TokenKind{
 	"type":        TokenTypeKeyword,
 	"var":         TokenVar,
 
-	"bool":        TokenBool,
-	"uint":        TokenUint,
-	"uint8":       TokenUint8,
-	"uint16":      TokenUint16,
-	"uint32":      TokenUint32,
-	"uint64":      TokenUint64,
-	"uintptr":     TokenUintPtr,
-	"int":         TokenInt,
-	"int8":        TokenInt8,
-	"int16":       TokenInt16,
-	"int32":       TokenInt32,
-	"int64":       TokenInt64,
-	"float32":     TokenFloat32,
-	"float64":     TokenFloat64,
-	"complex64":   TokenComplex64,
-	"complex128":  TokenComplex128,
-	"byte":        TokenByte,
-	"rune":        TokenRune,
-	"string":      TokenString,
+	"bool":       TokenBool,
+	"uint":       TokenUint,
+	"uint8":      TokenUint8,
+	"uint16":     TokenUint16,
+	"uint32":     TokenUint32,
+	"uint64":     TokenUint64,
+	"uintptr":    TokenUintPtr,
+	"int":        TokenInt,
+	"int8":       TokenInt8,
+	"int16":      TokenInt16,
+	"int32":      TokenInt32,
+	"int64":      TokenInt64,
+	"float32":    TokenFloat32,
+	"float64":    TokenFloat64,
+	"complex64":  TokenComplex64,
+	"complex128": TokenComplex128,
+	"byte":       TokenByte,
+	"rune":       TokenRune,
+	"string":     TokenString,
 }
 
 // the running state of the lexical analyser
@@ -443,7 +443,7 @@ func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 		if ch2 == '=' { // '*='
 			return TokenMultiplyAssign, 2, true
 		} else { // '*'
-			return TokenMultiply, 1, true
+			return TokenAsterisk, 1, true
 		}
 
 	case '/':
@@ -561,13 +561,13 @@ func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 	case ')': // ')'
 		return TokenCloseBracket, 1, true
 	case '[': // '['
-		return TokenOpenOption, 1, true
+		return TokenOpenSquareBracket, 1, true
 	case ']': // ']'
-		return TokenCloseOption, 1, true
+		return TokenCloseSquareBracket, 1, true
 	case '{': // '{'
-		return TokenOpenBlock, 1, true
+		return TokenOpenBrace, 1, true
 	case '}': // '}'
-		return TokenCloseBlock, 1, true
+		return TokenCloseBrace, 1, true
 	case ';': // ';'
 		return TokenSemicolon, 1, true
 	}

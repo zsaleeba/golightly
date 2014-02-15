@@ -7,7 +7,7 @@ const (
 	// operators
 	TokenAdd TokenKind = iota
 	TokenSubtract
-	TokenMultiply
+	TokenAsterisk // can be multiplication or pointer dereference
 	TokenDivide
 	TokenModulus
 	TokenBitwiseAnd
@@ -44,10 +44,10 @@ const (
 	TokenEllipsis
 	TokenOpenBracket
 	TokenCloseBracket
-	TokenOpenOption
-	TokenCloseOption
-	TokenOpenBlock
-	TokenCloseBlock
+	TokenOpenSquareBracket
+	TokenCloseSquareBracket
+	TokenOpenBrace
+	TokenCloseBrace
 	TokenComma
 	TokenDot
 	TokenColon

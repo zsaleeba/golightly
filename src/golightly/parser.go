@@ -188,7 +188,7 @@ func (p *Parser) parseImportSpec() (AST, error) {
 			return nil, NewError(p.filename, pathToken.Pos(), "this should have been a string. eg. 'import fred \"github.com/fred/thefredpackage\"'")
 		}
 
-		return ASTImport{pathToken.Pos(), ASTIdentifier{nextToken.Pos(), strPackageName.strVal}, NewASTValueFromToken(pathToken, p.ts)}, nil
+		return ASTImport{pathToken.Pos(), ASTIdentifier{nextToken.Pos(), "", strPackageName.strVal}, NewASTValueFromToken(pathToken, p.ts)}, nil
 
 	case TokenString:
 		// it's of the form 'import "frod"' - just get the import path.
@@ -344,7 +344,7 @@ func (p *Parser) parseTypeSpec() ([]AST, error) {
 		return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a name for a type, but it's not"))
 	}
 
-	identAST := ASTIdentifier{ident.Pos(), ident.(StringToken).strVal}
+	identAST := ASTIdentifier{ident.Pos(), "", ident.(StringToken).strVal}
 
 	// get the data type
 	matchTyp, typ, err := p.parseDataType()
@@ -448,7 +448,7 @@ func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
 		}
 
 		// add the identifier to our list of identifiers
-		asts = append(asts, ASTIdentifier{ident.Pos(), ident.(StringToken).strVal})
+		asts = append(asts, ASTIdentifier{ident.Pos(), "", ident.(StringToken).strVal})
 
 		// look for a comma after it
 		comma, err := p.lexer.PeekToken(0)
@@ -641,15 +641,47 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 	return asts, nil
 }
 
+// parseOptionallyQualifiedIdentifier parses an identifier with or without a package name.
+// OptionallyQualifiedIdent = identifier | QualifiedIdent .
+// QualifiedIdent = PackageName "." identifier .
+func (p *Parser) parseOptionallyQualifiedIdentifier() (AST, error) {
+	// check that it's an identifier of some sort
+	tok, err := p.lexer.GetToken()
+	if err != nil {
+		return nil, err
+	}
+	if tok.TokenKind() != TokenIdentifier {
+		return nil, NewError(p.filename, tok.Pos(), "if you could just put an identifier here that'd be greeeat")
+	}
+
+	ast := ASTIdentifier{tok.Pos(), "", tok.(StringToken).strVal}
+
+	// might be followed by a '.'
+	tok, err = p.lexer.PeekToken(0)
+	if tok.TokenKind() == TokenDot {
+		p.lexer.GetToken()
+
+		// get a following identifier
+		if tok.TokenKind() != TokenIdentifier {
+			return nil, NewError(p.filename, tok.Pos(), "if you could just put an identifier here that'd be greeeat")
+		}
+
+		ast.packageName = ast.name
+		ast.name = tok.(StringToken).strVal
+	}
+
+	return ast, nil
+}
+
 // expectToken parses a required semicolon
 func (p *Parser) expectToken(tk TokenKind, message string) error {
-	// get a semicolon separator
-	semicolonToken, err := p.lexer.GetToken()
+	// get a token
+	tok, err := p.lexer.GetToken()
 	if err != nil {
 		return err
 	}
-	if semicolonToken.TokenKind() != tk {
-		return NewError(p.filename, semicolonToken.Pos(), message)
+	if tok.TokenKind() != tk {
+		return NewError(p.filename, tok.Pos(), message)
 	}
 
 	return nil
