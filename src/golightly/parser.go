@@ -39,7 +39,7 @@ func (p *Parser) parseSourceFile() error {
 	ast.packageName = packageName
 
 	// get a semicolon separator
-	err = p.parseSemicolon("I'm gonna be needing a semicolon after this 'package' declaration")
+	err = p.expectToken(TokenSemicolon, "I'm gonna be needing a semicolon after this 'package' declaration")
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (p *Parser) parseSourceFile() error {
 			ast.imports = append(ast.imports, imports...)
 
 			// get a semicolon separator
-			err = p.parseSemicolon("I'm gonna be needing a semicolon after this 'import' declaration")
+			err = p.expectToken(TokenSemicolon, "I'm gonna be needing a semicolon after this 'import' declaration")
 			if err != nil {
 				return err
 			}
@@ -88,19 +88,16 @@ func (p *Parser) parseSourceFile() error {
 		ast.topLevelDecls = append(ast.topLevelDecls, topLevelDecls...)
 
 		// get a semicolon separator
-		err = p.parseSemicolon("I need a semicolon here")
+		err = p.expectToken(TokenSemicolon, "I need a semicolon here")
 		if err != nil {
 			return err
 		}
 	}
 
 	// make sure we're at the end of the file
-	endToken, err := p.lexer.GetToken()
+	err = p.expectToken(TokenEndOfSource, "I don't really know what this is or why it's here")
 	if err != nil {
 		return err
-	}
-	if endToken.TokenKind() != TokenEndOfSource {
-		return NewError(p.filename, endToken.Pos(), "I don't really know what this is or why it's here")
 	}
 
 	return nil
@@ -110,12 +107,9 @@ func (p *Parser) parseSourceFile() error {
 // PackageClause  = "package" PackageName .
 func (p *Parser) parsePackage() (string, error) {
 	// get the package declaration
-	packageToken, err := p.lexer.GetToken()
+	err := p.expectToken(TokenPackage, "the file should start with 'package <package name>'")
 	if err != nil {
 		return "", err
-	}
-	if packageToken.TokenKind() != TokenPackage {
-		return "", NewError(p.filename, packageToken.Pos(), "the file should start with 'package <package name>'")
 	}
 
 	packageNameToken, err := p.lexer.GetToken()
@@ -123,7 +117,7 @@ func (p *Parser) parsePackage() (string, error) {
 		return "", err
 	}
 	if packageNameToken.TokenKind() != TokenIdentifier {
-		return "", NewError(p.filename, packageToken.Pos(), "the package name should be a plain word. eg. 'package horatio'")
+		return "", NewError(p.filename, packageNameToken.Pos(), "the package name should be a plain word. eg. 'package horatio'")
 	}
 
 	strPackageName := packageNameToken.(StringToken)
@@ -404,13 +398,9 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 		}
 	} else {
 		// required equals
-		equalsToken, err := p.lexer.PeekToken(0)
+		err := p.expectToken(TokenEquals, "I was expecting to see an '=' here")
 		if err != nil {
 			return nil, err
-		}
-
-		if equalsToken.TokenKind() != TokenEquals {
-			return nil, NewError(p.filename, equalsToken.Pos(), "I was expecting to see an '=' here")
 		}
 
 		// get the expression list
@@ -574,12 +564,9 @@ func (p *Parser) parseSignature() (AST, error) {
 // parseGroupSingle parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
 func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName string) ([]AST, error) {
-	openBracketToken, err := p.lexer.PeekToken(0)
+	err := p.expectToken(TokenOpenBracket, "there should be a '(' here")
 	if err != nil {
 		return nil, err
-	}
-	if openBracketToken.TokenKind() != TokenOpenBracket {
-		return nil, NewError(p.filename, openBracketToken.Pos(), "there should be a '(' here")
 	}
 
 	// get a series of sub-clauses
@@ -603,7 +590,7 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 		}
 
 		// get a semicolon separator
-		err = p.parseSemicolon(semiErrorMessage)
+		err = p.expectToken(TokenSemicolon, semiErrorMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -617,12 +604,9 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 // parseGroupMulti parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
 func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName string) ([]AST, error) {
-	openBracketToken, err := p.lexer.PeekToken(0)
+	err := p.expectToken(TokenOpenBracket, "there should be a '(' here")
 	if err != nil {
 		return nil, err
-	}
-	if openBracketToken.TokenKind() != TokenOpenBracket {
-		return nil, NewError(p.filename, openBracketToken.Pos(), "there should be a '(' here")
 	}
 
 	// get a series of sub-clauses
@@ -646,7 +630,7 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 		}
 
 		// get a semicolon separator
-		err = p.parseSemicolon(semiErrorMessage)
+		err = p.expectToken(TokenSemicolon, semiErrorMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -657,14 +641,14 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 	return asts, nil
 }
 
-// parseSemicolon parses a required semicolon
-func (p *Parser) parseSemicolon(message string) error {
+// expectToken parses a required semicolon
+func (p *Parser) expectToken(tk TokenKind, message string) error {
 	// get a semicolon separator
 	semicolonToken, err := p.lexer.GetToken()
 	if err != nil {
 		return err
 	}
-	if semicolonToken.TokenKind() != TokenSemicolon {
+	if semicolonToken.TokenKind() != tk {
 		return NewError(p.filename, semicolonToken.Pos(), message)
 	}
 
