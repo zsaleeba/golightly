@@ -39,7 +39,7 @@ func (p *Parser) parseSourceFile() error {
 	ast.packageName = packageName
 
 	// get a semicolon separator
-	err = p.expectToken(TokenSemicolon, "I'm gonna be needing a semicolon after this 'package' declaration")
+	err = p.expectToken(TokenKindSemicolon, "I'm gonna be needing a semicolon after this 'package' declaration")
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (p *Parser) parseSourceFile() error {
 		return err
 	}
 
-	if tok.TokenKind() == TokenImport {
+	if tok.TokenKind() == TokenKindImport {
 		for {
 			// get an import
 			imports, err := p.parseImport()
@@ -61,7 +61,7 @@ func (p *Parser) parseSourceFile() error {
 			ast.imports = append(ast.imports, imports...)
 
 			// get a semicolon separator
-			err = p.expectToken(TokenSemicolon, "I'm gonna be needing a semicolon after this 'import' declaration")
+			err = p.expectToken(TokenKindSemicolon, "I'm gonna be needing a semicolon after this 'import' declaration")
 			if err != nil {
 				return err
 			}
@@ -88,14 +88,14 @@ func (p *Parser) parseSourceFile() error {
 		ast.topLevelDecls = append(ast.topLevelDecls, topLevelDecls...)
 
 		// get a semicolon separator
-		err = p.expectToken(TokenSemicolon, "I need a semicolon here")
+		err = p.expectToken(TokenKindSemicolon, "I need a semicolon here")
 		if err != nil {
 			return err
 		}
 	}
 
 	// make sure we're at the end of the file
-	err = p.expectToken(TokenEndOfSource, "I don't really know what this is or why it's here")
+	err = p.expectToken(TokenKindEndOfSource, "I don't really know what this is or why it's here")
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (p *Parser) parseSourceFile() error {
 // PackageClause  = "package" PackageName .
 func (p *Parser) parsePackage() (string, error) {
 	// get the package declaration
-	err := p.expectToken(TokenPackage, "the file should start with 'package <package name>'")
+	err := p.expectToken(TokenKindPackage, "the file should start with 'package <package name>'")
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +116,7 @@ func (p *Parser) parsePackage() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if packageNameToken.TokenKind() != TokenIdentifier {
+	if packageNameToken.TokenKind() != TokenKindIdentifier {
 		return "", NewError(p.filename, packageNameToken.Pos(), "the package name should be a plain word. eg. 'package horatio'")
 	}
 
@@ -133,7 +133,7 @@ func (p *Parser) parseImport() ([]AST, error) {
 	if err != nil {
 		return nil, err
 	}
-	if importToken.TokenKind() != TokenImport {
+	if importToken.TokenKind() != TokenKindImport {
 		return nil, nil
 	}
 
@@ -143,7 +143,7 @@ func (p *Parser) parseImport() ([]AST, error) {
 	if err != nil {
 		return nil, err
 	}
-	if nextToken.TokenKind() == TokenOpenBracket {
+	if nextToken.TokenKind() == TokenKindOpenBracket {
 		// get a series of import specs
 		imports, err := p.parseGroupSingle(p.parseImportSpec, "import")
 		if err != nil {
@@ -174,7 +174,7 @@ func (p *Parser) parseImportSpec() (AST, error) {
 	}
 
 	switch nextToken.TokenKind() {
-	case TokenIdentifier:
+	case TokenKindIdentifier:
 		// it's of the form 'import fred "frod"' - get a package name first.
 		strPackageName := nextToken.(StringToken)
 		p.lexer.GetToken()
@@ -184,13 +184,13 @@ func (p *Parser) parseImportSpec() (AST, error) {
 		if err != nil {
 			return nil, err
 		}
-		if pathToken.TokenKind() != TokenString {
+		if pathToken.TokenKind() != TokenKindString {
 			return nil, NewError(p.filename, pathToken.Pos(), "this should have been a string. eg. 'import fred \"github.com/fred/thefredpackage\"'")
 		}
 
 		return ASTImport{pathToken.Pos(), ASTIdentifier{nextToken.Pos(), "", strPackageName.strVal}, NewASTValueFromToken(pathToken, p.ts)}, nil
 
-	case TokenString:
+	case TokenKindString:
 		// it's of the form 'import "frod"' - just get the import path.
 		p.lexer.GetToken()
 		return ASTImport{nextToken.Pos(), nil, NewASTValueFromToken(nextToken, p.ts)}, nil
@@ -211,25 +211,25 @@ func (p *Parser) parseTopLevelDecl() (bool, []AST, error) {
 	}
 
 	switch nextToken.TokenKind() {
-	case TokenConst:
+	case TokenKindConst:
 		asts, err := p.parseDecl(p.parseConstSpec, "const")
 		return true, asts, err
 
-	case TokenTypeKeyword:
+	case TokenKindTypeKeyword:
 		asts, err := p.parseDecl(p.parseTypeSpec, "type")
 		return true, asts, err
 
-	case TokenVar:
+	case TokenKindVar:
 		asts, err := p.parseDecl(p.parseVarSpec, "var")
 		return true, asts, err
 
-	case TokenFunc:
+	case TokenKindFunc:
 		// is it a func decl or a method decl?
 		nextToken, err = p.lexer.PeekToken(1)
 		if err != nil {
 			return false, nil, err
 		}
-		if nextToken.TokenKind() == TokenOpenBracket {
+		if nextToken.TokenKind() == TokenKindOpenBracket {
 			// '(' is a total giveaway - it's a method decl
 			ast, err := p.parseMethodDecl()
 			return true, []AST{ast}, err
@@ -260,7 +260,7 @@ func (p *Parser) parseDecl(parseSpec func() ([]AST, error), verbName string) ([]
 	}
 
 	var decls []AST
-	if bracketToken.TokenKind() == TokenOpenBracket {
+	if bracketToken.TokenKind() == TokenKindOpenBracket {
 		// it's a group of specs
 		decls, err = p.parseGroupMulti(parseSpec, verbName)
 		if err != nil {
@@ -300,9 +300,9 @@ func (p *Parser) parseConstSpec() ([]AST, error) {
 
 	// handle optional part
 	var exprList []AST
-	if matchTyp || equalsToken.TokenKind() == TokenEquals {
+	if matchTyp || equalsToken.TokenKind() == TokenKindEquals {
 		// there must be an '=' and expression list after a type
-		if equalsToken.TokenKind() != TokenEquals {
+		if equalsToken.TokenKind() != TokenKindEquals {
 			return nil, NewError(p.filename, equalsToken.Pos(), "after a data type I expected to see '=' here")
 		}
 
@@ -340,7 +340,7 @@ func (p *Parser) parseTypeSpec() ([]AST, error) {
 		return nil, err
 	}
 
-	if ident.TokenKind() != TokenIdentifier {
+	if ident.TokenKind() != TokenKindIdentifier {
 		return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a name for a type, but it's not"))
 	}
 
@@ -388,7 +388,7 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 			return nil, err
 		}
 
-		if equalsToken.TokenKind() == TokenEquals {
+		if equalsToken.TokenKind() == TokenKindEquals {
 			// get the expression list
 			p.lexer.GetToken()
 			exprList, err = p.parseExpressionList()
@@ -398,7 +398,7 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 		}
 	} else {
 		// required equals
-		err := p.expectToken(TokenEquals, "I was expecting to see an '=' here")
+		err := p.expectToken(TokenKindEquals, "I was expecting to see an '=' here")
 		if err != nil {
 			return nil, err
 		}
@@ -443,7 +443,7 @@ func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
 			return nil, err
 		}
 
-		if ident.TokenKind() != TokenIdentifier {
+		if ident.TokenKind() != TokenKindIdentifier {
 			return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a name for a ", identDesc, ", but it's not"))
 		}
 
@@ -456,7 +456,7 @@ func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
 			return nil, err
 		}
 
-		if comma.TokenKind() != TokenComma {
+		if comma.TokenKind() != TokenKindComma {
 			break
 		}
 
@@ -485,7 +485,7 @@ func (p *Parser) parseExpressionList() ([]AST, error) {
 			return nil, err
 		}
 
-		if comma.TokenKind() != TokenComma {
+		if comma.TokenKind() != TokenKindComma {
 			break
 		}
 
@@ -518,7 +518,7 @@ func (p *Parser) parseFunctionDecl() (AST, error) {
 		return nil, err
 	}
 
-	if ident.TokenKind() != TokenIdentifier {
+	if ident.TokenKind() != TokenKindIdentifier {
 		return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a function name, but it's not"))
 	}
 
@@ -564,7 +564,7 @@ func (p *Parser) parseSignature() (AST, error) {
 // parseGroupSingle parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
 func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName string) ([]AST, error) {
-	err := p.expectToken(TokenOpenBracket, "there should be a '(' here")
+	err := p.expectToken(TokenKindOpenBracket, "there should be a '(' here")
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +579,7 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 		if err != nil {
 			return nil, err
 		}
-		if closeBracketToken.TokenKind() == TokenCloseBracket {
+		if closeBracketToken.TokenKind() == TokenKindCloseBracket {
 			break
 		}
 
@@ -590,7 +590,7 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 		}
 
 		// get a semicolon separator
-		err = p.expectToken(TokenSemicolon, semiErrorMessage)
+		err = p.expectToken(TokenKindSemicolon, semiErrorMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -604,7 +604,7 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 // parseGroupMulti parses a group of some other clause, surrounded by brackets and
 // with semicolons after each entry.
 func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName string) ([]AST, error) {
-	err := p.expectToken(TokenOpenBracket, "there should be a '(' here")
+	err := p.expectToken(TokenKindOpenBracket, "there should be a '(' here")
 	if err != nil {
 		return nil, err
 	}
@@ -619,7 +619,7 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 		if err != nil {
 			return nil, err
 		}
-		if closeBracketToken.TokenKind() == TokenCloseBracket {
+		if closeBracketToken.TokenKind() == TokenKindCloseBracket {
 			break
 		}
 
@@ -630,7 +630,7 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 		}
 
 		// get a semicolon separator
-		err = p.expectToken(TokenSemicolon, semiErrorMessage)
+		err = p.expectToken(TokenKindSemicolon, semiErrorMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -650,7 +650,7 @@ func (p *Parser) parseOptionallyQualifiedIdentifier() (AST, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok.TokenKind() != TokenIdentifier {
+	if tok.TokenKind() != TokenKindIdentifier {
 		return nil, NewError(p.filename, tok.Pos(), "if you could just put an identifier here that'd be greeeat")
 	}
 
@@ -658,11 +658,11 @@ func (p *Parser) parseOptionallyQualifiedIdentifier() (AST, error) {
 
 	// might be followed by a '.'
 	tok, err = p.lexer.PeekToken(0)
-	if tok.TokenKind() == TokenDot {
+	if tok.TokenKind() == TokenKindDot {
 		p.lexer.GetToken()
 
 		// get a following identifier
-		if tok.TokenKind() != TokenIdentifier {
+		if tok.TokenKind() != TokenKindIdentifier {
 			return nil, NewError(p.filename, tok.Pos(), "if you could just put an identifier here that'd be greeeat")
 		}
 

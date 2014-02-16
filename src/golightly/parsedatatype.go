@@ -14,31 +14,31 @@ func (p *Parser) parseDataType() (bool, AST, error) {
 	var err error
 
 	switch tok.TokenKind() {
-	case TokenIdentifier:
+	case TokenKindIdentifier:
 		ast, err = p.parseOptionallyQualifiedIdentifier()
 
-	case TokenOpenSquareBracket:
+	case TokenKindOpenSquareBracket:
 		ast, err = p.parseDataTypeArray()
 
-	case TokenStruct:
+	case TokenKindStruct:
 		ast, err = p.parseDataTypeStruct()
 
-	case TokenAsterisk:
+	case TokenKindAsterisk:
 		ast, err = p.parseDataTypePointer()
 
-	case TokenFunc:
+	case TokenKindFunc:
 		ast, err = p.parseDataTypeFunction()
 
-	case TokenInterface:
+	case TokenKindInterface:
 		ast, err = p.parseDataTypeInterface()
 
-	case TokenMap:
+	case TokenKindMap:
 		ast, err = p.parseDataTypeMap()
 
-	case TokenChan:
+	case TokenKindChan:
 		ast, err = p.parseDataTypeChannel()
 
-	case TokenOpenBracket:
+	case TokenKindOpenBracket:
 		ast, err = p.parseDataTypeBracketed()
 
 	default:
@@ -63,7 +63,7 @@ func (p *Parser) parseDataTypeArray() (AST, error) {
 		return nil, err
 	}
 	var arrayLength AST
-	if tok.TokenKind() != TokenCloseSquareBracket {
+	if tok.TokenKind() != TokenKindCloseSquareBracket {
 		// it's an array length
 		arrayLength, err = p.parseExpression()
 		if err != nil {
@@ -72,7 +72,7 @@ func (p *Parser) parseDataTypeArray() (AST, error) {
 	}
 
 	// it should be followed by a closing ']'
-	endSpan, err := p.expectTokenPos(TokenCloseSquareBracket, "you need a ']' here")
+	endSpan, err := p.expectTokenPos(TokenKindCloseSquareBracket, "you need a ']' here")
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (p *Parser) parseDataTypeBracketed() (AST, error) {
 	}
 
 	// get the close bracket
-	err = p.expectToken(TokenCloseBracket, "I need a ')' here to finish the data type")
+	err = p.expectToken(TokenKindCloseBracket, "I need a ')' here to finish the data type")
 	if err != nil {
 		return nil, err
 	}

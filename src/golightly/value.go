@@ -77,13 +77,13 @@ func (v ValueString) DataType(ts *DataTypeStore) DataType {
 // token is a literal value type.
 func NewValueFromToken(tok Token, ts *DataTypeStore) Value {
 	switch tok.TokenKind() {
-	case TokenLiteralInt:
+	case TokenKindLiteralInt:
 		return ValueUint{ts.UintType(), tok.(UintToken).uintVal}
-	case TokenLiteralFloat:
+	case TokenKindLiteralFloat:
 		return ValueFloat{ts.FloatType(), tok.(FloatToken).floatVal}
-	case TokenLiteralRune:
+	case TokenKindLiteralRune:
 		return ValueRune{rune(tok.(UintToken).uintVal)}
-	case TokenLiteralString:
+	case TokenKindLiteralString:
 		return ValueString{tok.(StringToken).strVal}
 	}
 

@@ -4,7 +4,7 @@ package golightly
 func (p *Parser) parseExpression() (AST, error) {
 	tok, _ := p.lexer.GetToken()
 
-	if tok.TokenKind() == TokenLiteralInt {
+	if tok.TokenKind() == TokenKindLiteralInt {
 		return ASTValue{tok.Pos(), NewValueFromToken(tok, p.ts)}, nil
 	}
 

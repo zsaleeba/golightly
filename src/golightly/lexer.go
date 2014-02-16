@@ -11,51 +11,74 @@ import (
 
 // a map of keywords for quick lookup
 var keywords map[string]TokenKind = map[string]TokenKind{
-	"break":       TokenBreak,
-	"case":        TokenCase,
-	"chan":        TokenChan,
-	"const":       TokenConst,
-	"continue":    TokenContinue,
-	"default":     TokenDefault,
-	"defer":       TokenDefer,
-	"else":        TokenElse,
-	"fallthrough": TokenFallthrough,
-	"for":         TokenFor,
-	"func":        TokenFunc,
-	"go":          TokenGo,
-	"goto":        TokenGoto,
-	"if":          TokenIf,
-	"import":      TokenImport,
-	"interface":   TokenInterface,
-	"map":         TokenMap,
-	"package":     TokenPackage,
-	"range":       TokenRange,
-	"return":      TokenReturn,
-	"select":      TokenSelect,
-	"struct":      TokenStruct,
-	"switch":      TokenSwitch,
-	"type":        TokenTypeKeyword,
-	"var":         TokenVar,
+	"break":       TokenKindBreak,
+	"case":        TokenKindCase,
+	"chan":        TokenKindChan,
+	"const":       TokenKindConst,
+	"continue":    TokenKindContinue,
+	"default":     TokenKindDefault,
+	"defer":       TokenKindDefer,
+	"else":        TokenKindElse,
+	"fallthrough": TokenKindFallthrough,
+	"for":         TokenKindFor,
+	"func":        TokenKindFunc,
+	"go":          TokenKindGo,
+	"goto":        TokenKindGoto,
+	"if":          TokenKindIf,
+	"import":      TokenKindImport,
+	"interface":   TokenKindInterface,
+	"map":         TokenKindMap,
+	"package":     TokenKindPackage,
+	"range":       TokenKindRange,
+	"return":      TokenKindReturn,
+	"select":      TokenKindSelect,
+	"struct":      TokenKindStruct,
+	"switch":      TokenKindSwitch,
+	"type":        TokenKindTypeKeyword,
+	"var":         TokenKindVar,
 
-	"bool":       TokenBool,
-	"uint":       TokenUint,
-	"uint8":      TokenUint8,
-	"uint16":     TokenUint16,
-	"uint32":     TokenUint32,
-	"uint64":     TokenUint64,
-	"uintptr":    TokenUintPtr,
-	"int":        TokenInt,
-	"int8":       TokenInt8,
-	"int16":      TokenInt16,
-	"int32":      TokenInt32,
-	"int64":      TokenInt64,
-	"float32":    TokenFloat32,
-	"float64":    TokenFloat64,
-	"complex64":  TokenComplex64,
-	"complex128": TokenComplex128,
-	"byte":       TokenByte,
-	"rune":       TokenRune,
-	"string":     TokenString,
+	// pre-declared identifiers - XXX move these to declarations in "universe" later.
+	"bool":       TokenKindBool,
+	"byte":       TokenKindByte,
+	"complex64":  TokenKindComplex64,
+	"complex128": TokenKindComplex128,
+	"error":      TokenKindError,
+	"float32":    TokenKindFloat32,
+	"float64":    TokenKindFloat64,
+	"int":        TokenKindInt,
+	"int8":       TokenKindInt8,
+	"int16":      TokenKindInt16,
+	"int32":      TokenKindInt32,
+	"int64":      TokenKindInt64,
+	"rune":       TokenKindRune,
+	"string":     TokenKindString,
+	"uint":       TokenKindUint,
+	"uint8":      TokenKindUint8,
+	"uint16":     TokenKindUint16,
+	"uint32":     TokenKindUint32,
+	"uint64":     TokenKindUint64,
+	"uintptr":    TokenKindUintPtr,
+/*
+	"true":       TokenKindTrue,
+	"false":      TokenKindFalse,
+	"iota":       TokenKindIota,
+	"nil":        TokenKindNil,
+	"append":     TokenKindAppend,
+	"cap":        TokenKindCap,
+	"close":      TokenKindClose,
+	"complex":    TokenKindComplex,
+	"copy":       TokenKindCopy,
+	"delete":     TokenKindDelete,
+	"imag":       TokenKindImag,
+	"len":        TokenKindLen,
+	"make":       TokenKindMake,
+	"new":        TokenKindNew,
+	"panic":      TokenKindPanic,
+	"print":      TokenKindPrint,
+	"println":    TokenKindPrintln,
+	"real":       TokenKindReal,
+	"recover":    TokenKindRecover,
+	 */
 }
 
 // the running state of the lexical analyser
@@ -376,7 +399,7 @@ func (l *Lexer) lexToken() (Token, error) {
 		}
 
 		// it must be an identifier
-		return StringToken{SimpleToken{l.pos, TokenIdentifier}, word}, nil
+		return StringToken{SimpleToken{l.pos, TokenKindIdentifier}, word}, nil
 	}
 
 	// is it a numeric literal?
@@ -420,76 +443,76 @@ func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '+='
-			return TokenAddAssign, 2, true
+			return TokenKindAddAssign, 2, true
 		case '+': // '++'
-			return TokenIncrement, 2, true
+			return TokenKindIncrement, 2, true
 		default: // '+'
-			return TokenAdd, 1, true
+			return TokenKindAdd, 1, true
 		}
 
 	case '-':
 		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '-='
-			return TokenSubtractAssign, 2, true
+			return TokenKindSubtractAssign, 2, true
 		case '-': // '--'
-			return TokenDecrement, 2, true
+			return TokenKindDecrement, 2, true
 		default: // '-'
-			return TokenSubtract, 1, true
+			return TokenKindSubtract, 1, true
 		}
 
 	case '*':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '*='
-			return TokenMultiplyAssign, 2, true
+			return TokenKindMultiplyAssign, 2, true
 		} else { // '*'
-			return TokenAsterisk, 1, true
+			return TokenKindAsterisk, 1, true
 		}
 
 	case '/':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '/='
-			return TokenDivideAssign, 2, true
+			return TokenKindDivideAssign, 2, true
 		} else { // '/'
-			return TokenDivide, 1, true
+			return TokenKindDivide, 1, true
 		}
 
 	case '%':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '%='
-			return TokenModulusAssign, 2, true
+			return TokenKindModulusAssign, 2, true
 		} else { // '%'
-			return TokenModulus, 1, true
+			return TokenKindModulus, 1, true
 		}
 
 	case '&':
 		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '&='
-			return TokenBitwiseAndAssign, 2, true
+			return TokenKindBitwiseAndAssign, 2, true
 		case '&': // '&&'
-			return TokenLogicalAnd, 2, true
+			return TokenKindLogicalAnd, 2, true
 		default: // '&'
-			return TokenBitwiseAnd, 1, true
+			return TokenKindBitwiseAnd, 1, true
 		}
 
 	case '|':
 		ch2, _ := l.peekRune(1)
 		switch ch2 {
 		case '=': // '|='
-			return TokenBitwiseOrAssign, 2, true
+			return TokenKindBitwiseOrAssign, 2, true
 		case '|': // '||'
-			return TokenLogicalOr, 2, true
+			return TokenKindLogicalOr, 2, true
 		default: // '|'
-			return TokenBitwiseOr, 1, true
+			return TokenKindBitwiseOr, 1, true
 		}
 
 	case '^':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '^='
-			return TokenBitwiseExorAssign, 2, true
+			return TokenKindBitwiseExorAssign, 2, true
 		} else { // '^'
-			return TokenBitwiseExor, 1, true
+			return TokenKindBitwiseExor, 1, true
 		}
 
 	case '<':
@@ -499,16 +522,16 @@ func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 			// look ahead another character
 			ch3, _ := l.peekRune(2)
 			if ch3 == '=' { // '<<='
-				return TokenShiftLeftAssign, 3, true
+				return TokenKindShiftLeftAssign, 3, true
 			} else { // '<<'
-				return TokenShiftLeft, 2, true
+				return TokenKindShiftLeft, 2, true
 			}
 		case '=': // '<='
-			return TokenLessEqual, 2, true
+			return TokenKindLessEqual, 2, true
 		case '-': // '<-'
-			return TokenChannelArrow, 2, true
+			return TokenKindChannelArrow, 2, true
 		default: // '<'
-			return TokenLess, 1, true
+			return TokenKindLess, 1, true
 		}
 
 	case '>':
@@ -518,58 +541,58 @@ func (l *Lexer) getOperator(ch rune) (TokenKind, int, bool) {
 			// look ahead another character
 			ch3, _ := l.peekRune(2)
 			if ch3 == '=' { // '>>='
-				return TokenShiftRightAssign, 3, true
+				return TokenKindShiftRightAssign, 3, true
 			} else { // '>>'
-				return TokenShiftRight, 2, true
+				return TokenKindShiftRight, 2, true
 			}
 		case '=': // '>='
-			return TokenGreaterEqual, 2, true
+			return TokenKindGreaterEqual, 2, true
 		default: // '>'
-			return TokenGreater, 1, true
+			return TokenKindGreater, 1, true
 		}
 
 	case '=':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '=='
-			return TokenEquals, 2, true
+			return TokenKindEquals, 2, true
 		} else { // '='
-			return TokenAssign, 1, true
+			return TokenKindAssign, 1, true
 		}
 
 	case '!':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // '!='
-			return TokenNotEqual, 2, true
+			return TokenKindNotEqual, 2, true
 		} else { // '!'
-			return TokenNot, 1, true
+			return TokenKindNot, 1, true
 		}
 
 	case ':':
 		ch2, _ := l.peekRune(1)
 		if ch2 == '=' { // ':='
-			return TokenDeclareAssign, 2, true
+			return TokenKindDeclareAssign, 2, true
 		} else { // ':'
-			return TokenColon, 1, true
+			return TokenKindColon, 1, true
 		}
 
 	case '.': // '.'
-		return TokenDot, 1, true
+		return TokenKindDot, 1, true
 	case ',': // ','
-		return TokenComma, 1, true
+		return TokenKindComma, 1, true
 	case '(': // '('
-		return TokenOpenBracket, 1, true
+		return TokenKindOpenBracket, 1, true
 	case ')': // ')'
-		return TokenCloseBracket, 1, true
+		return TokenKindCloseBracket, 1, true
 	case '[': // '['
-		return TokenOpenSquareBracket, 1, true
+		return TokenKindOpenSquareBracket, 1, true
 	case ']': // ']'
-		return TokenCloseSquareBracket, 1, true
+		return TokenKindCloseSquareBracket, 1, true
 	case '{': // '{'
-		return TokenOpenBrace, 1, true
+		return TokenKindOpenBrace, 1, true
 	case '}': // '}'
-		return TokenCloseBrace, 1, true
+		return TokenKindCloseBrace, 1, true
 	case ';': // ';'
-		return TokenSemicolon, 1, true
+		return TokenKindSemicolon, 1, true
 	}
 
 	return 0, 0, false
@@ -633,7 +656,7 @@ func (l *Lexer) getNumeric() (Token, error) {
 			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		return FloatToken{SimpleToken{l.pos, TokenLiteralFloat}, v}, nil
+		return FloatToken{SimpleToken{l.pos, TokenKindLiteralFloat}, v}, nil
 	} else {
 		// it's an int, parse it
 		v, err := strconv.ParseUint(word, 10, 64)
@@ -641,7 +664,7 @@ func (l *Lexer) getNumeric() (Token, error) {
 			return nil, NewError(l.sourceFile, l.pos, err.Error())
 		}
 
-		return UintToken{SimpleToken{l.pos, TokenLiteralInt}, v}, nil
+		return UintToken{SimpleToken{l.pos, TokenKindLiteralInt}, v}, nil
 	}
 }
 
@@ -657,7 +680,7 @@ func (l *Lexer) getRuneLiteral() (Token, error) {
 		return nil, NewError(l.sourceFile, l.pos, "this rune should be a single character")
 	}
 
-	return UintToken{SimpleToken{l.pos, TokenLiteralRune}, uint64(str[0])}, nil
+	return UintToken{SimpleToken{l.pos, TokenKindLiteralRune}, uint64(str[0])}, nil
 }
 
 // getStringLiteral gets a string literal.
@@ -669,7 +692,7 @@ func (l *Lexer) getStringLiteral() (Token, error) {
 	}
 
 	// we're at the end of the string
-	return StringToken{SimpleToken{l.pos, TokenLiteralString}, string(str)}, nil
+	return StringToken{SimpleToken{l.pos, TokenKindLiteralString}, string(str)}, nil
 }
 
 // getStringLiteralSimple gets a string literal, returning it as a []rune.
