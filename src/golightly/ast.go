@@ -131,8 +131,8 @@ func (ast ASTDataTypeDecl) Pos() SrcSpan {
 }
 
 type ASTDataTypeSlice struct {
-	pos SrcSpan // where the slice indicators [] are
-	elementType   AST // slice of this data type
+	pos         SrcSpan // where the slice indicators [] are
+	elementType AST     // slice of this data type
 }
 
 func (ast ASTDataTypeSlice) IsAST() {
@@ -143,9 +143,9 @@ func (ast ASTDataTypeSlice) Pos() SrcSpan {
 }
 
 type ASTDataTypeArray struct {
-	pos SrcSpan // where the array indicators [] are
-	arraySize AST // how large the array is
-	elementType   AST // slice of this data type
+	pos         SrcSpan // where the array indicators [] are
+	arraySize   AST     // how large the array is
+	elementType AST     // slice of this data type
 }
 
 func (ast ASTDataTypeArray) IsAST() {
