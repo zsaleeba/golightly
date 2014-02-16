@@ -6,52 +6,46 @@ package golightly
 // TypeLit   = ArrayType | StructType | PointerType | FunctionType | InterfaceType |
 //             SliceType | MapType | ChannelType .
 // TypeName  = identifier | QualifiedIdent .
-func (p *Parser) parseDataType() (bool, DataType, error) {
+func (p *Parser) parseDataType() (bool, AST, error) {
 	// what token do we have?
 	tok, _ := p.lexer.PeekToken(0)
 
-	var typ DataType
+	var ast AST
 	var err error
 
 	switch tok.TokenKind() {
 	case TokenIdentifier:
-		ast, err := p.parseOptionallyQualifiedIdentifier()
-		if err != nil {
-			return false, nil, err
-		}
-
-		// we create a temporary type which is just an AST of the identifier. We'll resolve it later.
-		typ = p.ts.MakeASTType(ast)
+		ast, err = p.parseOptionallyQualifiedIdentifier()
 
 	case TokenOpenSquareBracket:
-		typ, err = p.parseDataTypeArray()
+		ast, err = p.parseDataTypeArray()
 
 	case TokenStruct:
-		typ, err = p.parseDataTypeStruct()
+		ast, err = p.parseDataTypeStruct()
 
 	case TokenAsterisk:
-		typ, err = p.parseDataTypePointer()
+		ast, err = p.parseDataTypePointer()
 
 	case TokenFunc:
-		typ, err = p.parseDataTypeFunction()
+		ast, err = p.parseDataTypeFunction()
 
 	case TokenInterface:
-		typ, err = p.parseDataTypeInterface()
+		ast, err = p.parseDataTypeInterface()
 
 	case TokenMap:
-		typ, err = p.parseDataTypeMap()
+		ast, err = p.parseDataTypeMap()
 
 	case TokenChan:
-		typ, err = p.parseDataTypeChannel()
+		ast, err = p.parseDataTypeChannel()
 
 	case TokenOpenBracket:
-		typ, err = p.parseDataTypeBracketed()
+		ast, err = p.parseDataTypeBracketed()
 
 	default:
 		return false, nil, nil
 	}
 
-	return true, typ, err
+	return true, ast, err
 }
 
 // parseDataTypeArray parses an array data type or a slice data type.
@@ -59,9 +53,9 @@ func (p *Parser) parseDataType() (bool, DataType, error) {
 // ArrayLength = Expression .
 // ElementType = Type .
 // SliceType = "[" "]" ElementType .
-func (p *Parser) parseDataTypeArray() (DataType, error) {
+func (p *Parser) parseDataTypeArray() (AST, error) {
 	// we already know is starts with '['
-	p.lexer.GetToken()
+	startToken, _ := p.lexer.GetToken()
 
 	// is the next character a ']'?
 	tok, err := p.lexer.PeekToken(0)
@@ -78,7 +72,7 @@ func (p *Parser) parseDataTypeArray() (DataType, error) {
 	}
 
 	// it should be followed by a closing ']'
-	err = p.expectToken(TokenCloseSquareBracket, "you need a ']' here")
+	endSpan, err := p.expectTokenPos(TokenCloseSquareBracket, "you need a ']' here")
 	if err != nil {
 		return nil, err
 	}
@@ -97,16 +91,16 @@ func (p *Parser) parseDataTypeArray() (DataType, error) {
 	}
 
 	// make the new data type
-	var typ DataType
+	var ast AST
 	if arrayLength == nil {
 		// it's a slice
-		typ = p.ts.MakeSlice(elementType)
+		ast = ASTDataTypeSlice{startToken.Pos().Add(endSpan), elementType}
 	} else {
 		// it's an array
-		typ = p.ts.MakeArray(arrayLength, elementType)
+		ast = ASTDataTypeArray{startToken.Pos().Add(endSpan), arrayLength, elementType}
 	}
 
-	return typ, nil
+	return ast, nil
 }
 
 // parseDataTypeStruct parses a struct data type.
@@ -114,7 +108,7 @@ func (p *Parser) parseDataTypeArray() (DataType, error) {
 // FieldDecl      = (IdentifierList Type | AnonymousField) [ Tag ] .
 // AnonymousField = [ "*" ] TypeName .
 // Tag            = string_lit .
-func (p *Parser) parseDataTypeStruct() (DataType, error) {
+func (p *Parser) parseDataTypeStruct() (AST, error) {
 	tok, _ := p.lexer.PeekToken(0)
 	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
@@ -122,7 +116,7 @@ func (p *Parser) parseDataTypeStruct() (DataType, error) {
 // parseDataTypePointer parses a pointer data type.
 // PointerType = "*" BaseType .
 // BaseType = Type .
-func (p *Parser) parseDataTypePointer() (DataType, error) {
+func (p *Parser) parseDataTypePointer() (AST, error) {
 	tok, _ := p.lexer.PeekToken(0)
 	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
@@ -134,7 +128,7 @@ func (p *Parser) parseDataTypePointer() (DataType, error) {
 // Parameters     = "(" [ ParameterList [ "," ] ] ")" .
 // ParameterList  = ParameterDecl { "," ParameterDecl } .
 // ParameterDecl  = [ IdentifierList ] [ "..." ] Type .
-func (p *Parser) parseDataTypeFunction() (DataType, error) {
+func (p *Parser) parseDataTypeFunction() (AST, error) {
 	tok, _ := p.lexer.PeekToken(0)
 	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
@@ -144,7 +138,7 @@ func (p *Parser) parseDataTypeFunction() (DataType, error) {
 // MethodSpec         = MethodName Signature | InterfaceTypeName .
 // MethodName         = identifier .
 // InterfaceTypeName  = TypeName .
-func (p *Parser) parseDataTypeInterface() (DataType, error) {
+func (p *Parser) parseDataTypeInterface() (AST, error) {
 	tok, _ := p.lexer.PeekToken(0)
 	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
@@ -152,20 +146,20 @@ func (p *Parser) parseDataTypeInterface() (DataType, error) {
 // parseDataTypeMap parses a map data type.
 // MapType     = "map" "[" KeyType "]" ElementType .
 // KeyType     = Type .
-func (p *Parser) parseDataTypeMap() (DataType, error) {
+func (p *Parser) parseDataTypeMap() (AST, error) {
 	tok, _ := p.lexer.PeekToken(0)
 	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypeChannel parses a channel data type.
 // ChannelType = ( "chan" [ "<-" ] | "<-" "chan" ) ElementType .
-func (p *Parser) parseDataTypeChannel() (DataType, error) {
+func (p *Parser) parseDataTypeChannel() (AST, error) {
 	tok, _ := p.lexer.PeekToken(0)
 	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
 }
 
 // parseDataTypeBracketed parses a data type enclosed by brackets.
-func (p *Parser) parseDataTypeBracketed() (DataType, error) {
+func (p *Parser) parseDataTypeBracketed() (AST, error) {
 	// absorb the open bracket
 	p.lexer.GetToken()
 
@@ -175,7 +169,7 @@ func (p *Parser) parseDataTypeBracketed() (DataType, error) {
 		return nil, err
 	}
 
-	match, typ, err := p.parseDataType()
+	match, ast, err := p.parseDataType()
 	if err != nil {
 		return nil, err
 	}
@@ -189,5 +183,5 @@ func (p *Parser) parseDataTypeBracketed() (DataType, error) {
 		return nil, err
 	}
 
-	return typ, err
+	return ast, err
 }

@@ -287,7 +287,7 @@ func (p *Parser) parseConstSpec() ([]AST, error) {
 	}
 
 	// is there a data type following?
-	matchTyp, typ, err := p.parseDataType()
+	matchTyp, typeAST, err := p.parseDataType()
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +325,7 @@ func (p *Parser) parseConstSpec() ([]AST, error) {
 	// make a set of consts out of all this
 	asts := make([]AST, len(identList))
 	for i := 0; i < len(identList); i++ {
-		asts[i] = ASTConstDecl{identList[i], typ, exprList[i]}
+		asts[i] = ASTConstDecl{identList[i], typeAST, exprList[i]}
 	}
 
 	return asts, nil
@@ -347,7 +347,7 @@ func (p *Parser) parseTypeSpec() ([]AST, error) {
 	identAST := ASTIdentifier{ident.Pos(), "", ident.(StringToken).strVal}
 
 	// get the data type
-	matchTyp, typ, err := p.parseDataType()
+	matchTyp, typeAST, err := p.parseDataType()
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +362,7 @@ func (p *Parser) parseTypeSpec() ([]AST, error) {
 		return nil, NewError(p.filename, fail.Pos(), fmt.Sprint("this should have been a name for a type, but it's not"))
 	}
 
-	return []AST{ASTDataTypeDecl{identAST, typ}}, nil
+	return []AST{ASTDataTypeDecl{identAST, typeAST}}, nil
 }
 
 // parseVarSpec parses a variable declaration specification.
@@ -375,7 +375,7 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 	}
 
 	// is there a data type following?
-	matchTyp, typ, err := p.parseDataType()
+	matchTyp, typeAST, err := p.parseDataType()
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +425,7 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 	// make a set of variable declarations out of all this
 	asts := make([]AST, len(identList))
 	for i := 0; i < len(identList); i++ {
-		asts[i] = ASTVarDecl{identList[i], typ, exprList[i]}
+		asts[i] = ASTVarDecl{identList[i], typeAST, exprList[i]}
 	}
 
 	return asts, nil
@@ -673,16 +673,23 @@ func (p *Parser) parseOptionallyQualifiedIdentifier() (AST, error) {
 	return ast, nil
 }
 
-// expectToken parses a required semicolon
+// expectToken parses a required token.
 func (p *Parser) expectToken(tk TokenKind, message string) error {
+	_, err := p.expectTokenPos(tk, message)
+	return err
+}
+
+// expectTokenPos parses a required token. It returns the position of the
+// token.
+func (p *Parser) expectTokenPos(tk TokenKind, message string) (SrcSpan, error) {
 	// get a token
 	tok, err := p.lexer.GetToken()
 	if err != nil {
-		return err
+		return tok.Pos(), err
 	}
 	if tok.TokenKind() != tk {
-		return NewError(p.filename, tok.Pos(), message)
+		return tok.Pos(), NewError(p.filename, tok.Pos(), message)
 	}
 
-	return nil
+	return tok.Pos(), nil
 }

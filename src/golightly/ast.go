@@ -107,7 +107,7 @@ func (ast ASTDataType) Pos() SrcSpan {
 
 type ASTConstDecl struct {
 	ident AST // the variable to declare
-	typ   DataType // the optional data type
+	typ   AST // the optional data type
 	value AST // the value to set it to
 }
 
@@ -120,7 +120,7 @@ func (ast ASTConstDecl) Pos() SrcSpan {
 
 type ASTDataTypeDecl struct {
 	ident AST // the variable to declare
-	typ   DataType // the data type
+	typ   AST // the data type
 }
 
 func (ast ASTDataTypeDecl) IsAST() {
@@ -130,9 +130,34 @@ func (ast ASTDataTypeDecl) Pos() SrcSpan {
 	return ast.ident.Pos()
 }
 
+type ASTDataTypeSlice struct {
+	pos SrcSpan // where the slice indicators [] are
+	elementType   AST // slice of this data type
+}
+
+func (ast ASTDataTypeSlice) IsAST() {
+}
+
+func (ast ASTDataTypeSlice) Pos() SrcSpan {
+	return ast.pos
+}
+
+type ASTDataTypeArray struct {
+	pos SrcSpan // where the array indicators [] are
+	arraySize AST // how large the array is
+	elementType   AST // slice of this data type
+}
+
+func (ast ASTDataTypeArray) IsAST() {
+}
+
+func (ast ASTDataTypeArray) Pos() SrcSpan {
+	return ast.pos
+}
+
 type ASTVarDecl struct {
 	ident AST // the variable to declare
-	typ   DataType // the optional data type
+	typ   AST // the optional data type
 	value AST // the value to set it to
 }
 
