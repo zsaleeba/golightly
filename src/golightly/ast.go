@@ -168,8 +168,8 @@ func (ast ASTDataTypePointer) Pos() SrcSpan {
 }
 
 type ASTDataTypeMap struct {
-	pos         SrcSpan // where the map indicators map[...] are
-	keyType AST     // key is this data type
+	pos       SrcSpan // where the map indicators map[...] are
+	keyType   AST     // key is this data type
 	valueType AST     // value is this data type
 }
 
@@ -182,6 +182,7 @@ func (ast ASTDataTypeMap) Pos() SrcSpan {
 
 // type ChanDirection is the directions data can travel on a channel
 type ChanDirection int
+
 const (
 	ChanDirectionIn ChanDirection = iota
 	ChanDirectionOut
@@ -189,9 +190,9 @@ const (
 )
 
 type ASTDataTypeChan struct {
-	pos         SrcSpan // where the chan indicators chan and <- are
+	pos         SrcSpan       // where the chan indicators chan and <- are
 	dir         ChanDirection // what directions data can flow on this channel
-	elementType AST     // pointer to this data type
+	elementType AST           // pointer to this data type
 }
 
 func (ast ASTDataTypeChan) IsAST() {
