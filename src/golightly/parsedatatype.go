@@ -35,7 +35,7 @@ func (p *Parser) parseDataType() (bool, AST, error) {
 	case TokenKindMap:
 		ast, err = p.parseDataTypeMap()
 
-	case TokenKindChan:
+	case TokenKindChan, TokenKindChannelArrow:
 		ast, err = p.parseDataTypeChannel()
 
 	case TokenKindOpenBracket:
@@ -117,8 +117,19 @@ func (p *Parser) parseDataTypeStruct() (AST, error) {
 // PointerType = "*" BaseType .
 // BaseType = Type .
 func (p *Parser) parseDataTypePointer() (AST, error) {
-	tok, _ := p.lexer.PeekToken(0)
-	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	// get the '*' token
+	tok, _ := p.lexer.GetToken()
+
+	// get the element type
+	match, elementType, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, tok.Pos(), "by my reckoning this should have been followed by a data type")
+	}
+
+	return ASTDataTypePointer{tok.Pos(), elementType}, nil
 }
 
 // parseDataTypeFunction parses a function data type.
@@ -147,15 +158,88 @@ func (p *Parser) parseDataTypeInterface() (AST, error) {
 // MapType     = "map" "[" KeyType "]" ElementType .
 // KeyType     = Type .
 func (p *Parser) parseDataTypeMap() (AST, error) {
-	tok, _ := p.lexer.PeekToken(0)
-	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	// get the 'map' token
+	mapToken, _ := p.lexer.GetToken()
+
+	// get the opening '['
+	openSquareBracketToken, err := p.lexer.GetToken()
+	if err != nil {
+		return nil, err
+	}
+	if openSquareBracketToken.TokenKind() == TokenKindOpenSquareBracket {
+		return nil, NewError(p.filename, mapToken.Pos().Add(openSquareBracketToken.Pos()), "map types should look like 'map[key_type]element_type'")
+	}
+
+	// get the key type
+	match, keyType, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, mapToken.Pos(), "by my reckoning this should have been followed by a data type. map types should look like 'map[key_type]element_type'")
+	}
+
+	// get the closing ']'
+	closeSquareBracketToken, err := p.lexer.GetToken()
+	if err != nil {
+		return nil, err
+	}
+	if closeSquareBracketToken.TokenKind() == TokenKindCloseSquareBracket {
+		return nil, NewError(p.filename, closeSquareBracketToken.Pos(), "map types should look like 'map[key_type]element_type'")
+	}
+
+	// get the element type
+	match, elementType, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, closeSquareBracketToken.Pos(), "by my reckoning this should have been followed by a data type. map types should look like 'map[key_type]element_type'")
+	}
+
+	return ASTDataTypeMap{mapToken.Pos().Add(closeSquareBracketToken.Pos()), keyType, elementType}, nil
 }
 
 // parseDataTypeChannel parses a channel data type.
 // ChannelType = ( "chan" [ "<-" ] | "<-" "chan" ) ElementType .
 func (p *Parser) parseDataTypeChannel() (AST, error) {
-	tok, _ := p.lexer.PeekToken(0)
-	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	var dir ChanDirection
+	tok, _ := p.lexer.GetToken()
+	chanSpan := tok.Pos()
+	if tok.TokenKind() == TokenKindChan {
+		// starts with "chan", what's next?
+		tok2, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if tok2.TokenKind() == TokenKindChannelArrow {
+			// it's 'chan <-'
+			dir = ChanDirectionIn
+			chanSpan.end = tok2.Pos().end
+			p.lexer.GetToken()
+		}
+	} else {
+		// starts with '<-', we need a 'chan' now
+		p.lexer.GetToken()
+		tok2pos, err := p.expectTokenPos(TokenKindChan, "channels should look like 'chan', '<- chan' or 'chan <-'")
+		if err != nil {
+			return nil, err
+		}
+
+		chanSpan.end = tok2pos.end
+	}
+
+	// get the element type
+	match, elementType, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, chanSpan, "by my reckoning this chan definition should have been followed by a data type. chan types should look like 'chan element_type'")
+	}
+
+	return ASTDataTypeChan{chanSpan, dir, elementType}, nil
 }
 
 // parseDataTypeBracketed parses a data type enclosed by brackets.

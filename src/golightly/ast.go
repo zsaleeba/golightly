@@ -155,6 +155,52 @@ func (ast ASTDataTypeArray) Pos() SrcSpan {
 	return ast.pos
 }
 
+type ASTDataTypePointer struct {
+	pos         SrcSpan // where the pointer indicator * is
+	elementType AST     // pointer to this data type
+}
+
+func (ast ASTDataTypePointer) IsAST() {
+}
+
+func (ast ASTDataTypePointer) Pos() SrcSpan {
+	return ast.pos
+}
+
+type ASTDataTypeMap struct {
+	pos         SrcSpan // where the map indicators map[...] are
+	keyType AST     // key is this data type
+	valueType AST     // value is this data type
+}
+
+func (ast ASTDataTypeMap) IsAST() {
+}
+
+func (ast ASTDataTypeMap) Pos() SrcSpan {
+	return ast.pos
+}
+
+// type ChanDirection is the directions data can travel on a channel
+type ChanDirection int
+const (
+	ChanDirectionIn ChanDirection = iota
+	ChanDirectionOut
+	ChanDirectionBi
+)
+
+type ASTDataTypeChan struct {
+	pos         SrcSpan // where the chan indicators chan and <- are
+	dir         ChanDirection // what directions data can flow on this channel
+	elementType AST     // pointer to this data type
+}
+
+func (ast ASTDataTypeChan) IsAST() {
+}
+
+func (ast ASTDataTypeChan) Pos() SrcSpan {
+	return ast.pos
+}
+
 type ASTVarDecl struct {
 	ident AST // the variable to declare
 	typ   AST // the optional data type
