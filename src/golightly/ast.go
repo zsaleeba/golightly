@@ -261,3 +261,32 @@ func (ast ASTDataTypeFunc) IsAST() {
 func (ast ASTDataTypeFunc) Pos() SrcSpan {
 	return ast.pos
 }
+
+// type ASTParamDecl describes a function/method parameter or return value.
+type ASTParameterDecl struct {
+	identifier  AST   // the name of the parameter
+	typ         AST   // the type of the parameter
+}
+
+func (ast ASTParameterDecl) IsAST() {
+}
+
+func (ast ASTParameterDecl) Pos() SrcSpan {
+	if ast.identifier != nil {
+		return ast.identifier.Pos().Add(ast.typ.Pos())
+	} else {
+		return ast.typ.Pos()
+	}
+}
+
+// type ASTEllipsis describes an ellipsis as part of a parameter list.
+type ASTEllipsis struct {
+	pos SrcSpan // where the ellipsis is
+}
+
+func (ast ASTEllipsis) IsAST() {
+}
+
+func (ast ASTEllipsis) Pos() SrcSpan {
+	return ast.pos
+}
