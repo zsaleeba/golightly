@@ -202,6 +202,35 @@ func (ast ASTDataTypeChan) Pos() SrcSpan {
 	return ast.pos
 }
 
+type ASTDataTypeStruct struct {
+	pos    SrcSpan // the entire struct definition
+	fields []AST   // fields of this struct
+}
+
+func (ast ASTDataTypeStruct) IsAST() {
+}
+
+func (ast ASTDataTypeStruct) Pos() SrcSpan {
+	return ast.pos
+}
+
+type ASTDataTypeField struct {
+	identifier AST    // identifier of this field
+	typ        AST    // type of this field
+	tag        string // tag associated with this field
+}
+
+func (ast ASTDataTypeField) IsAST() {
+}
+
+func (ast ASTDataTypeField) Pos() SrcSpan {
+	if ast.identifier != nil {
+		return ast.identifier.Pos()
+	} else {
+		return ast.typ.Pos()
+	}
+}
+
 type ASTVarDecl struct {
 	ident AST // the variable to declare
 	typ   AST // the optional data type

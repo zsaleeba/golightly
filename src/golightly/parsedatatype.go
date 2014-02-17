@@ -109,12 +109,111 @@ func (p *Parser) parseDataTypeArray() (AST, error) {
 
 // parseDataTypeStruct parses a struct data type.
 // StructType     = "struct" "{" { FieldDecl ";" } "}" .
+func (p *Parser) parseDataTypeStruct() (AST, error) {
+	// get the 'struct' token
+	structTok, _ := p.lexer.GetToken()
+
+	// get a '{' as well
+	err := p.expectToken(TokenKindOpenBrace, "struct definitions need a '{' here")
+	if err != nil {
+		return nil, err
+	}
+
+	// get the struct fields
+	var fields []AST
+	for {
+		// are we at the end?
+		tok, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if tok.TokenKind() == TokenKindCloseBrace {
+			break
+		}
+
+		// get a field
+		newFields, err := p.parseDataTypeField()
+		if err != nil {
+			return nil, err
+		}
+
+		fields = append(fields, newFields...)
+
+		// get a semicolon
+		err = p.expectToken(TokenKindSemicolon, "semicolon expected between struct fields")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// get the trailing '}'
+	endPos, err := p.expectTokenPos(TokenKindCloseBrace, "struct definitions need a '}' here")
+	if err != nil {
+		return nil, err
+	}
+
+	return ASTDataTypeStruct{structTok.Pos().Add(endPos), fields}, nil
+}
+
+// parseDataTypeField parses a struct field declaration.
 // FieldDecl      = (IdentifierList Type | AnonymousField) [ Tag ] .
 // AnonymousField = [ "*" ] TypeName .
 // Tag            = string_lit .
-func (p *Parser) parseDataTypeStruct() (AST, error) {
-	tok, _ := p.lexer.PeekToken(0)
-	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+func (p *Parser) parseDataTypeField() ([]AST, error) {
+	// what do we have here?
+	tok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	var idents []AST
+	if tok.TokenKind() == TokenKindIdentifier {
+		// try parsing it as an identifier list
+		idents, err = p.parseIdentifierList("struct field")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// what type were these identifiers?
+	typeTok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	match, typ, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, typeTok.Pos(), "I needed a data type here in this struct field declaration")
+	}
+
+	// get a trailing tag if one exists
+	var tag string
+	tagTok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+	if tagTok.TokenKind() == TokenKindLiteralString {
+		tag = tagTok.(StringToken).strVal
+		p.lexer.GetToken()
+	}
+
+	// make the result
+	if idents == nil {
+		// just return a single anonymous field
+		return []AST{ASTDataTypeField{nil, typ, tag}}, nil
+	} else {
+		// return a set of struct fields
+		fields := make([]AST, len(idents))
+		for i, ident := range idents {
+			fields[i] = ASTDataTypeField{ident, typ, tag}
+		}
+
+		return fields, nil
+	}
 }
 
 // parseDataTypePointer parses a pointer data type.
