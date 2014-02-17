@@ -10,6 +10,7 @@ type AST interface {
 	Pos() SrcSpan
 }
 
+// type ASTTopLevel describes the top level of a source file.
 type ASTTopLevel struct {
 	pos           SrcSpan // where it is in the source
 	packageName   string  // the name of the package everything is contained in
@@ -24,6 +25,7 @@ func (ast ASTTopLevel) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTImport describes an import statement.
 type ASTImport struct {
 	pos         SrcSpan // where the keyword is in the source
 	packageName AST     // local package name to import as, or "." to import to the local scope.
@@ -37,6 +39,7 @@ func (ast ASTImport) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTUnaryExpr describes an expression operation with a single operand.
 type ASTUnaryExpr struct {
 	pos   SrcSpan   // where it is in the source
 	op    TokenKind // what kind of operation it is
@@ -50,6 +53,7 @@ func (ast ASTUnaryExpr) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTBinaryExpr describes an expression operation with two operands.
 type ASTBinaryExpr struct {
 	pos   SrcSpan   // where it is in the source
 	op    TokenKind // what kind of operation it is
@@ -64,6 +68,7 @@ func (ast ASTBinaryExpr) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTValue describes a literal value.
 type ASTValue struct {
 	pos SrcSpan // where it is in the source
 	val Value   // the value
@@ -80,6 +85,7 @@ func NewASTValueFromToken(v Token, ts *DataTypeStore) ASTValue {
 	return ASTValue{v.Pos(), NewValueFromToken(v, ts)}
 }
 
+// type ASTIdentifier describes an identifier reference.
 type ASTIdentifier struct {
 	pos         SrcSpan // where it is in the source
 	packageName string  // what package it's in
@@ -93,18 +99,7 @@ func (ast ASTIdentifier) Pos() SrcSpan {
 	return ast.pos
 }
 
-type ASTDataType struct {
-	pos SrcSpan  // where it is in the source
-	typ DataType // what data type it is
-}
-
-func (ast ASTDataType) IsAST() {
-}
-
-func (ast ASTDataType) Pos() SrcSpan {
-	return ast.pos
-}
-
+// type ASTConstDecl describes a constant declaration.
 type ASTConstDecl struct {
 	ident AST // the variable to declare
 	typ   AST // the optional data type
@@ -118,6 +113,21 @@ func (ast ASTConstDecl) Pos() SrcSpan {
 	return ast.ident.Pos()
 }
 
+// type ASTVarDecl describes a variable declaration.
+type ASTVarDecl struct {
+	ident AST // the variable to declare
+	typ   AST // the optional data type
+	value AST // the value to set it to
+}
+
+func (ast ASTVarDecl) IsAST() {
+}
+
+func (ast ASTVarDecl) Pos() SrcSpan {
+	return ast.ident.Pos()
+}
+
+// type ASTDataTypeDecl describes a type declaration using the 'type' keyword.
 type ASTDataTypeDecl struct {
 	ident AST // the variable to declare
 	typ   AST // the data type
@@ -130,6 +140,7 @@ func (ast ASTDataTypeDecl) Pos() SrcSpan {
 	return ast.ident.Pos()
 }
 
+// type ASTDataTypeSlice describes a slice declaration.
 type ASTDataTypeSlice struct {
 	pos         SrcSpan // where the slice indicators [] are
 	elementType AST     // slice of this data type
@@ -142,6 +153,7 @@ func (ast ASTDataTypeSlice) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTDataTypeArray describes an array declaration.
 type ASTDataTypeArray struct {
 	pos         SrcSpan // where the array indicators [] are
 	arraySize   AST     // how large the array is
@@ -155,6 +167,7 @@ func (ast ASTDataTypeArray) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTDataTypePointer describes a pointer declaration.
 type ASTDataTypePointer struct {
 	pos         SrcSpan // where the pointer indicator * is
 	elementType AST     // pointer to this data type
@@ -167,6 +180,7 @@ func (ast ASTDataTypePointer) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTDataTypeMap describes a map declaration.
 type ASTDataTypeMap struct {
 	pos       SrcSpan // where the map indicators map[...] are
 	keyType   AST     // key is this data type
@@ -180,7 +194,7 @@ func (ast ASTDataTypeMap) Pos() SrcSpan {
 	return ast.pos
 }
 
-// type ChanDirection is the directions data can travel on a channel
+// type ChanDirection is the directions data can travel on a channel.
 type ChanDirection int
 
 const (
@@ -189,6 +203,7 @@ const (
 	ChanDirectionBi
 )
 
+// type ASTDataTypeChan describes a channel declaration.
 type ASTDataTypeChan struct {
 	pos         SrcSpan       // where the chan indicators chan and <- are
 	dir         ChanDirection // what directions data can flow on this channel
@@ -202,6 +217,7 @@ func (ast ASTDataTypeChan) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTDataTypeStruct describes a structure declaration.
 type ASTDataTypeStruct struct {
 	pos    SrcSpan // the entire struct definition
 	fields []AST   // fields of this struct
@@ -214,6 +230,7 @@ func (ast ASTDataTypeStruct) Pos() SrcSpan {
 	return ast.pos
 }
 
+// type ASTDataTypeField describes a field of a struct.
 type ASTDataTypeField struct {
 	identifier AST    // identifier of this field
 	typ        AST    // type of this field
@@ -231,15 +248,16 @@ func (ast ASTDataTypeField) Pos() SrcSpan {
 	}
 }
 
-type ASTVarDecl struct {
-	ident AST // the variable to declare
-	typ   AST // the optional data type
-	value AST // the value to set it to
+// type ASTDataTypeFunc describes a function/method declaration.
+type ASTDataTypeFunc struct {
+	pos     SrcSpan // the entire func signature
+	params  []AST   // parameters
+	returns []AST   // return values of this function
 }
 
-func (ast ASTVarDecl) IsAST() {
+func (ast ASTDataTypeFunc) IsAST() {
 }
 
-func (ast ASTVarDecl) Pos() SrcSpan {
-	return ast.ident.Pos()
+func (ast ASTDataTypeFunc) Pos() SrcSpan {
+	return ast.pos
 }
