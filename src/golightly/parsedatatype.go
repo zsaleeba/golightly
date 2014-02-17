@@ -248,38 +248,51 @@ func (p *Parser) parseDataTypeFunction() (AST, error) {
 	// get the "func" token
 	funcTok, _ := p.lexer.GetToken()
 
+	// get a function signature
+	params, returns, err := p.parseDataTypeSignature()
+	if err != nil {
+		return nil, err
+	}
+
+	return ASTDataTypeFunc{funcTok.Pos(), params, returns}, nil
+}
+
+// parseDataTypeSignature parses a function/method signature.
+// Signature      = Parameters [ Result ] .
+// Result         = Parameters | Type .
+func (p *Parser) parseDataTypeSignature() ([]AST, []AST, error) {
 	// get a bracket-enclosed parameter list
 	params, err := p.parseBracketedParameterList()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// is there a return type?
 	returnTok, err := p.lexer.PeekToken(0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	funcAST := ASTDataTypeFunc{funcTok.Pos(), params, nil}
+	var returns []AST
 	if returnTok.TokenKind() == TokenKindOpenBracket {
 		// it's a bracketed return list
-		funcAST.returns, err = p.parseBracketedParameterList()
+		returns, err = p.parseBracketedParameterList()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		// is it a single data type?
 		match, returnType, err := p.parseDataType()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if match {
 			// yes, set this return type
-			funcAST.returns = []AST{ASTParameterDecl{nil, returnType}}
+			returns = []AST{ASTParameterDecl{nil, returnType}}
 		}
 	}
 
-	return funcAST, nil
+	return params, returns, nil
 }
 
 // parseBracketedParameterList parses a parameter list surrounded by brackets.
@@ -356,8 +369,85 @@ func (p *Parser) parseParameterDecl() ([]AST, error) {
 // MethodName         = identifier .
 // InterfaceTypeName  = TypeName .
 func (p *Parser) parseDataTypeInterface() (AST, error) {
-	tok, _ := p.lexer.PeekToken(0)
-	return nil, NewError(p.filename, tok.Pos(), "unimplemented")
+	// get the 'interface' token
+	interfaceToken, _ := p.lexer.GetToken()
+
+	// get a '{' as well
+	err := p.expectToken(TokenKindOpenBrace, "interface definitions need a '{' here")
+	if err != nil {
+		return nil, err
+	}
+
+	// get the interface methods
+	var methods []AST
+	for {
+		// are we at the end?
+		tok, err := p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if tok.TokenKind() == TokenKindCloseBrace {
+			break
+		}
+
+		// get a field
+		method, err := p.parseDataTypeMethodSpec()
+		if err != nil {
+			return nil, err
+		}
+
+		methods = append(methods, method)
+
+		// get a semicolon
+		err = p.expectToken(TokenKindSemicolon, "semicolon expected between interface methods")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// get the trailing '}'
+	err = p.expectToken(TokenKindCloseBrace, "interface definitions need a '}' here")
+	if err != nil {
+		return nil, err
+	}
+
+	return ASTDataTypeInterface{interfaceToken.Pos(), methods}, nil
+}
+
+// parseDataTypeMethodSpec parses an interface data type.
+// MethodSpec         = MethodName Signature | InterfaceTypeName .
+// MethodName         = identifier .
+// InterfaceTypeName  = TypeName .
+func (p *Parser) parseDataTypeMethodSpec() (AST, error) {
+	// if it's a method name the second token will be '(' to start the signature.
+	tok2, err := p.lexer.PeekToken(1)
+	if err != nil {
+		return nil, err
+	}
+
+	if tok2.TokenKind() == TokenKindOpenBracket {
+		// it's a method name
+		methodName, err := p.lexer.GetToken()
+		if err != nil {
+			return nil, err
+		}
+
+		if methodName.TokenKind() != TokenKindIdentifier {
+			return nil, NewError(p.filename, methodName.Pos(), "this should be a method name, but I'm not really seeing it")
+		}
+
+		// get the signature
+		params, returns, err := p.parseDataTypeSignature()
+		if err != nil {
+			return nil, err
+		}
+
+		return ASTDataTypeMethodSpec{methodName.Pos(), methodName.(StringToken).strVal, params, returns}, nil
+	} else {
+		// it must be an interface type name
+		return p.parseOptionallyQualifiedIdentifier()
+	}
 }
 
 // parseDataTypeMap parses a map data type.

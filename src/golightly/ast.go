@@ -264,8 +264,8 @@ func (ast ASTDataTypeFunc) Pos() SrcSpan {
 
 // type ASTParamDecl describes a function/method parameter or return value.
 type ASTParameterDecl struct {
-	identifier  AST   // the name of the parameter
-	typ         AST   // the type of the parameter
+	identifier AST // the name of the parameter
+	typ        AST // the type of the parameter
 }
 
 func (ast ASTParameterDecl) IsAST() {
@@ -288,5 +288,33 @@ func (ast ASTEllipsis) IsAST() {
 }
 
 func (ast ASTEllipsis) Pos() SrcSpan {
+	return ast.pos
+}
+
+// type ASTDataTypeInterface describes an interface declaration.
+type ASTDataTypeInterface struct {
+	pos     SrcSpan // the start of the interface definition
+	methods []AST   // methods of this interface
+}
+
+func (ast ASTDataTypeInterface) IsAST() {
+}
+
+func (ast ASTDataTypeInterface) Pos() SrcSpan {
+	return ast.pos
+}
+
+// type ASTDataTypeMethodSpec describes a method within an interface declaration.
+type ASTDataTypeMethodSpec struct {
+	pos     SrcSpan // where the name is in the source
+	name    string  // the identifier name
+	params  []AST   // the method parameters
+	returns []AST   // the method return values
+}
+
+func (ast ASTDataTypeMethodSpec) IsAST() {
+}
+
+func (ast ASTDataTypeMethodSpec) Pos() SrcSpan {
 	return ast.pos
 }
