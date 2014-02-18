@@ -127,6 +127,38 @@ func (ast ASTVarDecl) Pos() SrcSpan {
 	return ast.ident.Pos()
 }
 
+// type ASTFunctionDecl describes a function or method declaration.
+type ASTFunctionDecl struct {
+	pos     SrcSpan // the 'func <name>' part of the declaration
+	name    string  // the function name
+	receiver AST    // the optional receiver
+	params  []AST     // the parameters
+	returns []AST     // the return values
+	body    AST     // the body of the function
+}
+
+func (ast ASTFunctionDecl) IsAST() {
+}
+
+func (ast ASTFunctionDecl) Pos() SrcSpan {
+	return ast.pos
+}
+
+// type ASTReceiver describes a receiver in a method declaration.
+type ASTReceiver struct {
+	pos     SrcSpan // the whole receiver
+	name    string  // the receiving variable name
+	pointer bool    // true if it's of the form *Type
+	typeName string // the name of the receiver's type
+}
+
+func (ast ASTReceiver) IsAST() {
+}
+
+func (ast ASTReceiver) Pos() SrcSpan {
+	return ast.pos
+}
+
 // type ASTDataTypeDecl describes a type declaration using the 'type' keyword.
 type ASTDataTypeDecl struct {
 	ident AST // the variable to declare
@@ -318,3 +350,17 @@ func (ast ASTDataTypeMethodSpec) IsAST() {
 func (ast ASTDataTypeMethodSpec) Pos() SrcSpan {
 	return ast.pos
 }
+
+// type ASTBlock describes a block and the statements in it.
+type ASTBlock struct {
+	pos     SrcSpan // the entire span of the block
+	statements []AST   // the statements in the block
+}
+
+func (ast ASTBlock) IsAST() {
+}
+
+func (ast ASTBlock) Pos() SrcSpan {
+	return ast.pos
+}
+

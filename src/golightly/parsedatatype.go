@@ -249,118 +249,12 @@ func (p *Parser) parseDataTypeFunction() (AST, error) {
 	funcTok, _ := p.lexer.GetToken()
 
 	// get a function signature
-	params, returns, err := p.parseDataTypeSignature()
+	params, returns, err := p.parseSignature()
 	if err != nil {
 		return nil, err
 	}
 
 	return ASTDataTypeFunc{funcTok.Pos(), params, returns}, nil
-}
-
-// parseDataTypeSignature parses a function/method signature.
-// Signature      = Parameters [ Result ] .
-// Result         = Parameters | Type .
-func (p *Parser) parseDataTypeSignature() ([]AST, []AST, error) {
-	// get a bracket-enclosed parameter list
-	params, err := p.parseBracketedParameterList()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// is there a return type?
-	returnTok, err := p.lexer.PeekToken(0)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var returns []AST
-	if returnTok.TokenKind() == TokenKindOpenBracket {
-		// it's a bracketed return list
-		returns, err = p.parseBracketedParameterList()
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		// is it a single data type?
-		match, returnType, err := p.parseDataType()
-		if err != nil {
-			return nil, nil, err
-		}
-		if match {
-			// yes, set this return type
-			returns = []AST{ASTParameterDecl{nil, returnType}}
-		}
-	}
-
-	return params, returns, nil
-}
-
-// parseBracketedParameterList parses a parameter list surrounded by brackets.
-// Parameters     = "(" [ ParameterList [ "," ] ] ")" .
-// ParameterList  = ParameterDecl { "," ParameterDecl } .
-// ParameterDecl  = [ IdentifierList ] [ "..." ] Type .
-func (p *Parser) parseBracketedParameterList() ([]AST, error) {
-	// get the open bracket
-	err := p.expectToken(TokenKindOpenBracket, "parameter lists should start with '('")
-	if err != nil {
-		return nil, err
-	}
-
-	// get a series of parameter declarations
-	var params []AST
-	for {
-		// get a parameter declaration
-		newParams, err := p.parseParameterDecl()
-		if err != nil {
-			return nil, err
-		}
-
-		params = append(params, newParams...)
-	}
-
-	return params, nil
-}
-
-// parseBracketedParameterList parses a parameter list surrounded by brackets.
-// ParameterDecl  = [ IdentifierList ] [ "..." ] Type .
-func (p *Parser) parseParameterDecl() ([]AST, error) {
-	// get a list of identifiers
-	idents, err := p.parseIdentifierList("parameter")
-	if err != nil {
-		return nil, err
-	}
-
-	// see if there's a "..."
-	tok, err := p.lexer.PeekToken(0)
-	if err != nil {
-		return nil, err
-	}
-
-	if tok.TokenKind() == TokenKindEllipsis {
-		idents = append(idents, ASTEllipsis{tok.Pos()})
-	}
-
-	// the next thing should be a type declaration.
-	typeToken, err := p.lexer.PeekToken(0)
-	if err != nil {
-		return nil, err
-	}
-
-	match, typ, err := p.parseDataType()
-	if err != nil {
-		return nil, err
-	}
-	if !match {
-		return nil, NewError(p.filename, typeToken.Pos(), "there's a missing type in this parameter list")
-	}
-
-	// return all the parameters, expanded
-	params := make([]AST, len(idents))
-	for i, ident := range idents {
-		params[i] = ASTParameterDecl{ident, typ}
-	}
-
-	return params, nil
 }
 
 // parseDataTypeInterface parses an interface data type.
@@ -438,7 +332,7 @@ func (p *Parser) parseDataTypeMethodSpec() (AST, error) {
 		}
 
 		// get the signature
-		params, returns, err := p.parseDataTypeSignature()
+		params, returns, err := p.parseSignature()
 		if err != nil {
 			return nil, err
 		}

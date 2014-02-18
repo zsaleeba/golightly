@@ -224,20 +224,9 @@ func (p *Parser) parseTopLevelDecl() (bool, []AST, error) {
 		return true, asts, err
 
 	case TokenKindFunc:
-		// is it a func decl or a method decl?
-		nextToken, err = p.lexer.PeekToken(1)
-		if err != nil {
-			return false, nil, err
-		}
-		if nextToken.TokenKind() == TokenKindOpenBracket {
-			// '(' is a total giveaway - it's a method decl
-			ast, err := p.parseMethodDecl()
-			return true, []AST{ast}, err
-		} else {
-			// it's a func decl
-			ast, err := p.parseFunctionDecl()
-			return true, []AST{ast}, err
-		}
+		// it's a func or method decl
+		ast, err := p.parseFunctionDecl()
+		return true, []AST{ast}, err
 
 	default:
 		return false, nil, NewError(p.filename, nextToken.Pos(), "so I wanted a top level thing like a type, a func, a const or a var, but no... you had to be different")
@@ -466,99 +455,111 @@ func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
 	return asts, nil
 }
 
-// parseExpressionList parses a comma-separated list of expressions.
-// ExpressionList = Expression { "," Expression } .
-func (p *Parser) parseExpressionList() ([]AST, error) {
-	// get an expression
-	expr, err := p.parseExpression()
-	if err != nil {
-		return nil, err
-	}
-
-	asts := []AST{expr}
-
-	// get more commas then expressions
-	for {
-		// look for a comma
-		comma, err := p.lexer.PeekToken(0)
-		if err != nil {
-			return nil, err
-		}
-
-		if comma.TokenKind() != TokenKindComma {
-			break
-		}
-
-		p.lexer.GetToken()
-
-		// get an expression
-		expr, err = p.parseExpression()
-		if err != nil {
-			return nil, err
-		}
-
-		// add the identifier to our list of identifiers
-		asts = append(asts, expr)
-
-	}
-
-	return asts, nil
-}
-
-// parseFunctionDecl parses a function declaration. Note that "func" will
-// already have been consumed so we're starting from the FunctionName.
+// parseFunctionDecl parses a function or method declaration. Note that
+// "func" will already have been consumed so we're starting from the
+// FunctionName or receiver.
 // FunctionDecl = "func" FunctionName ( Function | Signature ) .
 func (p *Parser) parseFunctionDecl() (AST, error) {
 	// we already know it starts with "func"
 	funcToken, _ := p.lexer.GetToken()
 
-	// get an identifier for the function name
-	ident, err := p.lexer.GetToken()
+	// get an identifier for the function name or possibly a receiver
+	tok, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
 	}
 
-	if ident.TokenKind() != TokenKindIdentifier {
-		return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a function name, but it's not"))
+	var receiver AST
+	if tok.TokenKind() == TokenKindOpenBracket {
+		// it's a receiver
+		receiver, err = p.parseReceiver()
+
+		// take a look at the next token
+		tok, err = p.lexer.PeekToken(0)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// get a function or a signature
+	if tok.TokenKind() != TokenKindIdentifier {
+		return nil, NewError(p.filename, tok.Pos(), fmt.Sprint("this should have been a function name, but it's not"))
+	}
+	funcName := tok.(StringToken).strVal
+	p.lexer.GetToken()
 
-	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
+	// get a signature
+	params, returns, err := p.parseSignature()
+	if err != nil {
+		return nil, err
+	}
+
+	// this might be followed by a function body
+	bodyToken, err := p.lexer.PeekToken(0)
+	var body AST
+	if bodyToken.TokenKind() == TokenKindOpenBrace {
+		// parse a function body
+		body, err = p.parseBlock()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ASTFunctionDecl{funcToken.Pos().Add(tok.Pos()), funcName, receiver, params, returns, body}, nil
 }
 
-// parseMethodDecl parses a method declaration. Note that "func" will
-// already have been consumed so we're starting from the Receiver.
-// MethodDecl   = "func" Receiver MethodName ( Function | Signature ) .
+// parseReceiver parses a method receiver.
 // Receiver     = "(" [ identifier ] [ "*" ] BaseTypeName ")" .
-func (p *Parser) parseMethodDecl() (AST, error) {
-	// we already know it starts with "func"
-	funcToken, _ := p.lexer.GetToken()
+// BaseTypeName = identifier .
+func (p *Parser) parseReceiver() (AST, error) {
+	// get the opening bracket
+	bracketPos, err := p.expectTokenPos(TokenKindOpenBracket, "receivers start with an open bracket, but that's not what I'm seeing")
+	if err != nil {
+		return nil, err
+	}
 
-	// get the receiver
+	// get an optional identifier
+	var ident string
+	tok, err := p.lexer.GetToken()
+	if err != nil {
+		return nil, err
+	}
+	tok2, err := p.lexer.PeekToken(1)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
-}
+	if tok.TokenKind() == TokenKindIdentifier && tok2.TokenKind() != TokenKindCloseBracket {
+		ident = tok.(StringToken).strVal
 
-// parseFunction parses a function definition.
-// Function     = Signature FunctionBody .
-// FunctionBody = Block .
-func (p *Parser) parseFunction() (AST, error) {
-	// we already know it starts with "func"
-	funcToken, _ := p.lexer.GetToken()
+		// get the next token
+		tok, err = p.lexer.GetToken()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
-}
+	// get an optional '*'
+	pointer := false
+	if tok.TokenKind() == TokenKindAsterisk {
+		pointer = true
 
-// parseSignature parses a function signature.
-// Signature      = Parameters [ Result ] .
-// Result         = Parameters | Type .
-// Parameters     = "(" [ ParameterList [ "," ] ] ")" .
-func (p *Parser) parseSignature() (AST, error) {
-	// we already know it starts with "func"
-	funcToken, _ := p.lexer.GetToken()
+		// get the next token
+		tok, err = p.lexer.GetToken()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return nil, NewError(p.filename, funcToken.Pos(), "unimplemented")
+	// get the base type name
+	if tok.TokenKind() != TokenKindIdentifier {
+		return nil, NewError(p.filename, tok.Pos(), "I was expecting a type name in this receiver. Receivers should look like '(rec_var [*]type_name)'")
+	}
+	baseTypeName := tok.(StringToken).strVal
+
+	// now get the closing bracket
+	endBracketPos, err := p.expectTokenPos(TokenKindCloseBracket, "I'd like a ')' to finish this receiver... thanks")
+
+	return ASTReceiver{bracketPos.Add(endBracketPos), ident, pointer, baseTypeName}, nil
 }
 
 // parseGroupSingle parses a group of some other clause, surrounded by brackets and
@@ -671,6 +672,112 @@ func (p *Parser) parseOptionallyQualifiedIdentifier() (AST, error) {
 	}
 
 	return ast, nil
+}
+
+// parseSignature parses a function/method signature.
+// Signature      = Parameters [ Result ] .
+// Result         = Parameters | Type .
+func (p *Parser) parseSignature() ([]AST, []AST, error) {
+	// get a bracket-enclosed parameter list
+	params, err := p.parseBracketedParameterList()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// is there a return type?
+	returnTok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var returns []AST
+	if returnTok.TokenKind() == TokenKindOpenBracket {
+		// it's a bracketed return list
+		returns, err = p.parseBracketedParameterList()
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		// is it a single data type?
+		match, returnType, err := p.parseDataType()
+		if err != nil {
+			return nil, nil, err
+		}
+		if match {
+			// yes, set this return type
+			returns = []AST{ASTParameterDecl{nil, returnType}}
+		}
+	}
+
+	return params, returns, nil
+}
+
+// parseBracketedParameterList parses a parameter list surrounded by brackets.
+// Parameters     = "(" [ ParameterList [ "," ] ] ")" .
+// ParameterList  = ParameterDecl { "," ParameterDecl } .
+// ParameterDecl  = [ IdentifierList ] [ "..." ] Type .
+func (p *Parser) parseBracketedParameterList() ([]AST, error) {
+	// get the open bracket
+	err := p.expectToken(TokenKindOpenBracket, "parameter lists should start with '('")
+	if err != nil {
+		return nil, err
+	}
+
+	// get a series of parameter declarations
+	var params []AST
+	for {
+		// get a parameter declaration
+		newParams, err := p.parseParameterDecl()
+		if err != nil {
+			return nil, err
+		}
+
+		params = append(params, newParams...)
+	}
+
+	return params, nil
+}
+
+// parseBracketedParameterList parses a parameter list surrounded by brackets.
+// ParameterDecl  = [ IdentifierList ] [ "..." ] Type .
+func (p *Parser) parseParameterDecl() ([]AST, error) {
+	// get a list of identifiers
+	idents, err := p.parseIdentifierList("parameter")
+	if err != nil {
+		return nil, err
+	}
+
+	// see if there's a "..."
+	tok, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	if tok.TokenKind() == TokenKindEllipsis {
+		idents = append(idents, ASTEllipsis{tok.Pos()})
+	}
+
+	// the next thing should be a type declaration.
+	typeToken, err := p.lexer.PeekToken(0)
+	if err != nil {
+		return nil, err
+	}
+
+	match, typ, err := p.parseDataType()
+	if err != nil {
+		return nil, err
+	}
+	if !match {
+		return nil, NewError(p.filename, typeToken.Pos(), "there's a missing type in this parameter list")
+	}
+
+	// return all the parameters, expanded
+	params := make([]AST, len(idents))
+	for i, ident := range idents {
+		params[i] = ASTParameterDecl{ident, typ}
+	}
+
+	return params, nil
 }
 
 // expectToken parses a required token.
