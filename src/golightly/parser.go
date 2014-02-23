@@ -4,33 +4,35 @@ import (
 	"fmt"
 )
 
-// type Parser controls parsing of a token stream into an AST
+// type Parser controls parsing of a token stream into an AST.
 type Parser struct {
-	lexer *Lexer         // the lexical analyser
-	ts    *DataTypeStore // the data type store
+	lexer *Lexer         // the lexical analyser.
+	ts    *DataTypeStore // the data type store.
+	addSrcFile  chan string  // new files are queued for compilation using this stream.
 
-	filename    string // the name of the file being parsed
-	packageName string // the name of the package this file is a part of
+	filename    string // the name of the file being parsed.
+	packageName string // the name of the package this file is a part of.
 }
 
-// NewParser
-func NewParser(lexer *Lexer, ts *DataTypeStore) *Parser {
+// NewParser creates a new parser object.
+func NewParser(lexer *Lexer, ts *DataTypeStore, addSrcFile chan string) *Parser {
 	p := new(Parser)
 	p.lexer = lexer
 	p.ts = ts
+	p.addSrcFile = addSrcFile
 
 	return p
 }
 
 // Parse runs the parser and breaks the program down into an Abstract Syntax Tree.
 func (p *Parser) Parse() error {
-	return nil
+	return p.parseSourceFile()
 }
 
 // parseSourceFile parses the contents of an entire source file.
 // SourceFile       = PackageClause ";" { ImportDecl ";" } { TopLevelDecl ";" } .
 func (p *Parser) parseSourceFile() error {
-	// get the package declaration
+	// get the package declaration.
 	ast := new(ASTTopLevel)
 	packageName, err := p.parsePackage()
 	if err != nil {
@@ -38,13 +40,13 @@ func (p *Parser) parseSourceFile() error {
 	}
 	ast.packageName = packageName
 
-	// get a semicolon separator
+	// get a semicolon separator.
 	err = p.expectToken(TokenKindSemicolon, "I'm gonna be needing a semicolon after this 'package' declaration")
 	if err != nil {
 		return err
 	}
 
-	// get a number of import declarations
+	// get a number of import declarations.
 	tok, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return err
@@ -52,7 +54,7 @@ func (p *Parser) parseSourceFile() error {
 
 	if tok.TokenKind() == TokenKindImport {
 		for {
-			// get an import
+			// get an import.
 			imports, err := p.parseImport()
 			if err != nil {
 				return err
@@ -60,7 +62,7 @@ func (p *Parser) parseSourceFile() error {
 
 			ast.imports = append(ast.imports, imports...)
 
-			// get a semicolon separator
+			// get a semicolon separator.
 			err = p.expectToken(TokenKindSemicolon, "I'm gonna be needing a semicolon after this 'import' declaration")
 			if err != nil {
 				return err
@@ -68,14 +70,14 @@ func (p *Parser) parseSourceFile() error {
 		}
 	}
 
-	// get a number of top-level declarations
+	// get a number of top-level declarations.
 	tok, err = p.lexer.PeekToken(0)
 	if err != nil {
 		return err
 	}
 
 	for {
-		// get a top-level declaration
+		// get a top-level declaration.
 		match, topLevelDecls, err := p.parseTopLevelDecl()
 		if err != nil {
 			return err
@@ -87,14 +89,14 @@ func (p *Parser) parseSourceFile() error {
 
 		ast.topLevelDecls = append(ast.topLevelDecls, topLevelDecls...)
 
-		// get a semicolon separator
+		// get a semicolon separator.
 		err = p.expectToken(TokenKindSemicolon, "I need a semicolon here")
 		if err != nil {
 			return err
 		}
 	}
 
-	// make sure we're at the end of the file
+	// make sure we're at the end of the file.
 	err = p.expectToken(TokenKindEndOfSource, "I don't really know what this is or why it's here")
 	if err != nil {
 		return err
@@ -144,7 +146,7 @@ func (p *Parser) parseImport() ([]AST, error) {
 		return nil, err
 	}
 	if nextToken.TokenKind() == TokenKindOpenBracket {
-		// get a series of import specs
+		// get a series of import specs.
 		imports, err := p.parseGroupSingle(p.parseImportSpec, "import")
 		if err != nil {
 			return nil, err
@@ -152,7 +154,7 @@ func (p *Parser) parseImport() ([]AST, error) {
 
 		return imports, nil
 	} else {
-		// get a single import
+		// get a single import.
 		tree, err := p.parseImportSpec()
 		if err != nil {
 			return nil, err
@@ -179,7 +181,7 @@ func (p *Parser) parseImportSpec() (AST, error) {
 		strPackageName := nextToken.(StringToken)
 		p.lexer.GetToken()
 
-		// get an import path
+		// get an import path.
 		pathToken, err := p.lexer.GetToken()
 		if err != nil {
 			return nil, err
@@ -188,11 +190,20 @@ func (p *Parser) parseImportSpec() (AST, error) {
 			return nil, NewError(p.filename, pathToken.Pos(), "this should have been a string. eg. 'import fred \"github.com/fred/thefredpackage\"'")
 		}
 
+		// tell the compiler to read the imported file
+		p.addSrcFile <- pathToken.(StringToken).strVal
+
+		// return the import spec
 		return ASTImport{pathToken.Pos(), ASTIdentifier{nextToken.Pos(), "", strPackageName.strVal}, NewASTValueFromToken(pathToken, p.ts)}, nil
 
 	case TokenKindString:
 		// it's of the form 'import "frod"' - just get the import path.
 		p.lexer.GetToken()
+
+		// tell the compiler to read the imported file
+		p.addSrcFile <- nextToken.(StringToken).strVal
+
+		// return the import spec
 		return ASTImport{nextToken.Pos(), nil, NewASTValueFromToken(nextToken, p.ts)}, nil
 
 	default:
@@ -224,7 +235,7 @@ func (p *Parser) parseTopLevelDecl() (bool, []AST, error) {
 		return true, asts, err
 
 	case TokenKindFunc:
-		// it's a func or method decl
+		// it's a func or method decl.
 		ast, err := p.parseFunctionDecl()
 		return true, []AST{ast}, err
 
@@ -250,13 +261,13 @@ func (p *Parser) parseDecl(parseSpec func() ([]AST, error), verbName string) ([]
 
 	var decls []AST
 	if bracketToken.TokenKind() == TokenKindOpenBracket {
-		// it's a group of specs
+		// it's a group of specs.
 		decls, err = p.parseGroupMulti(parseSpec, verbName)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		// it's a single spec
+		// it's a single spec.
 		decls, err = parseSpec()
 		if err != nil {
 			return nil, err
@@ -287,15 +298,15 @@ func (p *Parser) parseConstSpec() ([]AST, error) {
 		return nil, err
 	}
 
-	// handle optional part
+	// handle optional part.
 	var exprList []AST
 	if matchTyp || equalsToken.TokenKind() == TokenKindEquals {
-		// there must be an '=' and expression list after a type
+		// there must be an '=' and expression list after a type.
 		if equalsToken.TokenKind() != TokenKindEquals {
 			return nil, NewError(p.filename, equalsToken.Pos(), "after a data type I expected to see '=' here")
 		}
 
-		// get the expression list
+		// get the expression list.
 		p.lexer.GetToken()
 		exprList, err = p.parseExpressionList()
 		if err != nil {
@@ -311,7 +322,7 @@ func (p *Parser) parseConstSpec() ([]AST, error) {
 		return nil, NewError(p.filename, identSpan, "there are less names here than there are values")
 	}
 
-	// make a set of consts out of all this
+	// make a set of consts out of all this.
 	asts := make([]AST, len(identList))
 	for i := 0; i < len(identList); i++ {
 		asts[i] = ASTConstDecl{identList[i], typeAST, exprList[i]}
@@ -341,7 +352,7 @@ func (p *Parser) parseTypeSpec() ([]AST, error) {
 		return nil, err
 	}
 
-	// the type is mandatory here
+	// the type is mandatory here.
 	if !matchTyp {
 		fail, err := p.lexer.PeekToken(0)
 		if err != nil {
@@ -371,14 +382,14 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 
 	var exprList []AST
 	if matchTyp {
-		// optional equals
+		// optional equals.
 		equalsToken, err := p.lexer.PeekToken(0)
 		if err != nil {
 			return nil, err
 		}
 
 		if equalsToken.TokenKind() == TokenKindEquals {
-			// get the expression list
+			// get the expression list.
 			p.lexer.GetToken()
 			exprList, err = p.parseExpressionList()
 			if err != nil {
@@ -386,13 +397,13 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 			}
 		}
 	} else {
-		// required equals
+		// required equals.
 		err := p.expectToken(TokenKindEquals, "I was expecting to see an '=' here")
 		if err != nil {
 			return nil, err
 		}
 
-		// get the expression list
+		// get the expression list.
 		p.lexer.GetToken()
 		exprList, err = p.parseExpressionList()
 		if err != nil {
@@ -411,7 +422,7 @@ func (p *Parser) parseVarSpec() ([]AST, error) {
 		}
 	}
 
-	// make a set of variable declarations out of all this
+	// make a set of variable declarations out of all this.
 	asts := make([]AST, len(identList))
 	for i := 0; i < len(identList); i++ {
 		asts[i] = ASTVarDecl{identList[i], typeAST, exprList[i]}
@@ -426,7 +437,7 @@ func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
 	var asts []AST
 
 	for {
-		// get an identifier
+		// get an identifier.
 		ident, err := p.lexer.GetToken()
 		if err != nil {
 			return nil, err
@@ -436,10 +447,10 @@ func (p *Parser) parseIdentifierList(identDesc string) ([]AST, error) {
 			return nil, NewError(p.filename, ident.Pos(), fmt.Sprint("this should have been a name for a ", identDesc, ", but it's not"))
 		}
 
-		// add the identifier to our list of identifiers
+		// add the identifier to our list of identifiers.
 		asts = append(asts, ASTIdentifier{ident.Pos(), "", ident.(StringToken).strVal})
 
-		// look for a comma after it
+		// look for a comma after it.
 		comma, err := p.lexer.PeekToken(0)
 		if err != nil {
 			return nil, err
@@ -463,7 +474,7 @@ func (p *Parser) parseFunctionDecl() (AST, error) {
 	// we already know it starts with "func"
 	funcToken, _ := p.lexer.GetToken()
 
-	// get an identifier for the function name or possibly a receiver
+	// get an identifier for the function name or possibly a receiver.
 	tok, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
@@ -471,10 +482,10 @@ func (p *Parser) parseFunctionDecl() (AST, error) {
 
 	var receiver AST
 	if tok.TokenKind() == TokenKindOpenBracket {
-		// it's a receiver
+		// it's a receiver.
 		receiver, err = p.parseReceiver()
 
-		// take a look at the next token
+		// take a look at the next token.
 		tok, err = p.lexer.PeekToken(0)
 		if err != nil {
 			return nil, err
@@ -487,17 +498,17 @@ func (p *Parser) parseFunctionDecl() (AST, error) {
 	funcName := tok.(StringToken).strVal
 	p.lexer.GetToken()
 
-	// get a signature
+	// get a signature.
 	params, returns, err := p.parseSignature()
 	if err != nil {
 		return nil, err
 	}
 
-	// this might be followed by a function body
+	// this might be followed by a function body.
 	bodyToken, err := p.lexer.PeekToken(0)
 	var body AST
 	if bodyToken.TokenKind() == TokenKindOpenBrace {
-		// parse a function body
+		// parse a function body.
 		body, err = p.parseBlock()
 		if err != nil {
 			return nil, err
@@ -517,7 +528,7 @@ func (p *Parser) parseReceiver() (AST, error) {
 		return nil, err
 	}
 
-	// get an optional identifier
+	// get an optional identifier.
 	var ident string
 	tok, err := p.lexer.GetToken()
 	if err != nil {
@@ -531,32 +542,32 @@ func (p *Parser) parseReceiver() (AST, error) {
 	if tok.TokenKind() == TokenKindIdentifier && tok2.TokenKind() != TokenKindCloseBracket {
 		ident = tok.(StringToken).strVal
 
-		// get the next token
+		// get the next token.
 		tok, err = p.lexer.GetToken()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// get an optional '*'
+	// get an optional '*'.
 	pointer := false
 	if tok.TokenKind() == TokenKindAsterisk {
 		pointer = true
 
-		// get the next token
+		// get the next token.
 		tok, err = p.lexer.GetToken()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// get the base type name
+	// get the base type name.
 	if tok.TokenKind() != TokenKindIdentifier {
 		return nil, NewError(p.filename, tok.Pos(), "I was expecting a type name in this receiver. Receivers should look like '(rec_var [*]type_name)'")
 	}
 	baseTypeName := tok.(StringToken).strVal
 
-	// now get the closing bracket
+	// now get the closing bracket.
 	endBracketPos, err := p.expectTokenPos(TokenKindCloseBracket, "I'd like a ')' to finish this receiver... thanks")
 
 	return ASTReceiver{bracketPos.Add(endBracketPos), ident, pointer, baseTypeName}, nil
@@ -570,7 +581,7 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 		return nil, err
 	}
 
-	// get a series of sub-clauses
+	// get a series of sub-clauses.
 	p.lexer.GetToken()
 	var asts []AST
 	semiErrorMessage := fmt.Sprint("I really wanted a semicolon between these '", verbName, "'s")
@@ -584,13 +595,13 @@ func (p *Parser) parseGroupSingle(parseClause func() (AST, error), verbName stri
 			break
 		}
 
-		// parse a sub-clause
+		// parse a sub-clause.
 		newClause, err := parseClause()
 		if err != nil {
 			return nil, err
 		}
 
-		// get a semicolon separator
+		// get a semicolon separator.
 		err = p.expectToken(TokenKindSemicolon, semiErrorMessage)
 		if err != nil {
 			return nil, err
@@ -610,7 +621,7 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 		return nil, err
 	}
 
-	// get a series of sub-clauses
+	// get a series of sub-clauses.
 	p.lexer.GetToken()
 	var asts []AST
 	semiErrorMessage := fmt.Sprint("I really wanted a semicolon between these '", verbName, "'s")
@@ -624,13 +635,13 @@ func (p *Parser) parseGroupMulti(parseClause func() ([]AST, error), verbName str
 			break
 		}
 
-		// parse a sub-clause
+		// parse a sub-clause.
 		newClauses, err := parseClause()
 		if err != nil {
 			return nil, err
 		}
 
-		// get a semicolon separator
+		// get a semicolon separator.
 		err = p.expectToken(TokenKindSemicolon, semiErrorMessage)
 		if err != nil {
 			return nil, err
@@ -662,7 +673,7 @@ func (p *Parser) parseOptionallyQualifiedIdentifier() (AST, error) {
 	if tok.TokenKind() == TokenKindDot {
 		p.lexer.GetToken()
 
-		// get a following identifier
+		// get a following identifier.
 		if tok.TokenKind() != TokenKindIdentifier {
 			return nil, NewError(p.filename, tok.Pos(), "if you could just put an identifier here that'd be greeeat")
 		}
@@ -692,7 +703,7 @@ func (p *Parser) parseSignature() ([]AST, []AST, error) {
 
 	var returns []AST
 	if returnTok.TokenKind() == TokenKindOpenBracket {
-		// it's a bracketed return list
+		// it's a bracketed return list.
 		returns, err = p.parseBracketedParameterList()
 		if err != nil {
 			return nil, nil, err
@@ -704,7 +715,7 @@ func (p *Parser) parseSignature() ([]AST, []AST, error) {
 			return nil, nil, err
 		}
 		if match {
-			// yes, set this return type
+			// yes, set this return type.
 			returns = []AST{ASTParameterDecl{nil, returnType}}
 		}
 	}
@@ -723,10 +734,10 @@ func (p *Parser) parseBracketedParameterList() ([]AST, error) {
 		return nil, err
 	}
 
-	// get a series of parameter declarations
+	// get a series of parameter declarations.
 	var params []AST
 	for {
-		// get a parameter declaration
+		// get a parameter declaration.
 		newParams, err := p.parseParameterDecl()
 		if err != nil {
 			return nil, err
@@ -747,7 +758,7 @@ func (p *Parser) parseParameterDecl() ([]AST, error) {
 		return nil, err
 	}
 
-	// see if there's a "..."
+	// see if there's a "...".
 	tok, err := p.lexer.PeekToken(0)
 	if err != nil {
 		return nil, err
@@ -771,7 +782,7 @@ func (p *Parser) parseParameterDecl() ([]AST, error) {
 		return nil, NewError(p.filename, typeToken.Pos(), "there's a missing type in this parameter list")
 	}
 
-	// return all the parameters, expanded
+	// return all the parameters, expanded.
 	params := make([]AST, len(idents))
 	for i, ident := range idents {
 		params[i] = ASTParameterDecl{ident, typ}

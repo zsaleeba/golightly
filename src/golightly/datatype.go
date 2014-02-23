@@ -110,6 +110,7 @@ func NewDataTypeStore() *DataTypeStore {
 	ts.stringType = DataTypeBasic{DataTypeKindString}
 
 	ts.nameMapMutex.Lock()
+	ts.nameMap = make(map[string]DataType)
 	ts.nameMap["int"] = ts.intType
 	ts.nameMap["uint"] = ts.uintType
 	ts.nameMap["float"] = ts.floatType
