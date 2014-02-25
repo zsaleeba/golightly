@@ -10,7 +10,15 @@ func setupDataTypeTest(src string) *Parser {
 	reader := strings.NewReader(src)
 	lex.LexReader(reader, "test.go")
 	ts := NewDataTypeStore()
-	parser := NewParser(lex, ts)
+	addSrcFile := make(chan string)
+	parser := NewParser(lex, ts, addSrcFile)
+
+	// just throw away anything we get on the addSrcFile channel.
+	go func() {
+		for {
+			<- addSrcFile
+		}
+	}()
 
 	return parser
 }

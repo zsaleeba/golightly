@@ -16,3 +16,13 @@ type SrcSpan struct {
 func (ss SrcSpan) Add(to SrcSpan) SrcSpan {
 	return SrcSpan{ss.start, to.end}
 }
+
+// Equals compares two source spans.
+func (ss SrcSpan) Equals(to SrcSpan) bool {
+	return ss.start.Equals(to.start) && ss.end.Equals(to.end)
+}
+
+// Equals compares two source spans.
+func (ss SrcLoc) Equals(to SrcLoc) bool {
+	return ss.Line == to.Line && ss.Column == to.Column
+}
