@@ -1,9 +1,9 @@
 package golightly
 
 import (
-	"testing"
-	"strings"
 	"fmt"
+	"strings"
+	"testing"
 )
 
 func TestLexerLexLine(t *testing.T) {
@@ -34,98 +34,98 @@ k += 'X';`)
 		return
 	}
 
-/*
-	err := checkToken(tl, 1, 1, TokenPackage)
+	/*
+		err := checkToken(tl, 1, 1, TokenPackage)
 
-	err = checkTokenString(tl, 1, 9, TokenIdentifier, "golightly")
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenString(tl, 1, 9, TokenIdentifier, "golightly")
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 3, 1, TokenImport)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 3, 1, TokenImport)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 3, 8, TokenOpenGroup)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 3, 8, TokenOpenGroup)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenString(tl, 4, 5, TokenString, "testing")
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenString(tl, 4, 5, TokenString, "testing")
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 5, 1, TokenCloseGroup)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 5, 1, TokenCloseGroup)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenString(tl, 7, 1, TokenIdentifier, "i")
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenString(tl, 7, 1, TokenIdentifier, "i")
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 7, 3, TokenDeclareAssign)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 7, 3, TokenDeclareAssign)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenUint(tl, 7, 6, TokenLiteralInt, 42)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenUint(tl, 7, 6, TokenLiteralInt, 42)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 7, 8, TokenSemicolon)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 7, 8, TokenSemicolon)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenString(tl, 8, 1, TokenIdentifier, "j")
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenString(tl, 8, 1, TokenIdentifier, "j")
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 8, 3, TokenDeclareAssign)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 8, 3, TokenDeclareAssign)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenFloat(tl, 8, 6, TokenLiteralFloat, 7.2)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenFloat(tl, 8, 6, TokenLiteralFloat, 7.2)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 8, 9, TokenSemicolon)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 8, 9, TokenSemicolon)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenString(tl, 9, 1, TokenIdentifier, "k")
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenString(tl, 9, 1, TokenIdentifier, "k")
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 9, 3, TokenAddAssign)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 9, 3, TokenAddAssign)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkTokenUint(tl, 9, 6, TokenLiteralRune, uint64('X'))
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkTokenUint(tl, 9, 6, TokenLiteralRune, uint64('X'))
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 9, 9, TokenSemicolon)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 9, 9, TokenSemicolon)
+		if err != nil {
+			t.Error(err)
+		}
 
-	err = checkToken(tl, 10, 1, TokenEndOfSource)
-	if err != nil {
-		t.Error(err)
-	}
+		err = checkToken(tl, 10, 1, TokenEndOfSource)
+		if err != nil {
+			t.Error(err)
+		}
 	*/
 }
 

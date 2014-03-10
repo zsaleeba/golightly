@@ -16,7 +16,7 @@ func setupDataTypeTest(src string) *Parser {
 	// just throw away anything we get on the addSrcFile channel.
 	go func() {
 		for {
-			<- addSrcFile
+			<-addSrcFile
 		}
 	}()
 
@@ -38,7 +38,7 @@ func TestParseDataType(t *testing.T) {
 		t.Error("doesn't match a data type")
 		return
 	}
-	if !compareAST(ast, ASTIdentifier{SrcSpan{SrcLoc{1,1}, SrcLoc{1,3}}, "", "int"}) {
+	if !compareAST(ast, ASTIdentifier{SrcSpan{SrcLoc{1, 1}, SrcLoc{1, 3}}, "", "int"}) {
 		t.Errorf("parse failed: %s", ast)
 		return
 	}

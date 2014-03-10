@@ -189,12 +189,12 @@ func (ast ASTVarDecl) Equals(to AST) bool {
 
 // type ASTFunctionDecl describes a function or method declaration.
 type ASTFunctionDecl struct {
-	pos     SrcSpan // the 'func <name>' part of the declaration
-	name    string  // the function name
-	receiver AST    // the optional receiver
-	params  []AST     // the parameters
-	returns []AST     // the return values
-	body    AST     // the body of the function
+	pos      SrcSpan // the 'func <name>' part of the declaration
+	name     string  // the function name
+	receiver AST     // the optional receiver
+	params   []AST   // the parameters
+	returns  []AST   // the return values
+	body     AST     // the body of the function
 }
 
 func (ast ASTFunctionDecl) IsAST() {
@@ -231,10 +231,10 @@ func (ast ASTFunctionDecl) Equals(to AST) bool {
 
 // type ASTReceiver describes a receiver in a method declaration.
 type ASTReceiver struct {
-	pos     SrcSpan // the whole receiver
-	name    string  // the receiving variable name
-	pointer bool    // true if it's of the form *Type
-	typeName string // the name of the receiver's type
+	pos      SrcSpan // the whole receiver
+	name     string  // the receiving variable name
+	pointer  bool    // true if it's of the form *Type
+	typeName string  // the name of the receiver's type
 }
 
 func (ast ASTReceiver) IsAST() {
@@ -384,7 +384,7 @@ func (ast ASTDataTypeStruct) Pos() SrcSpan {
 
 func (ast ASTDataTypeStruct) Equals(to AST) bool {
 	too := to.(ASTDataTypeStruct)
-	if (!ast.pos.Equals(too.pos) && len(ast.fields) == len(too.fields)) {
+	if !ast.pos.Equals(too.pos) && len(ast.fields) == len(too.fields) {
 		return false
 	}
 
@@ -560,7 +560,7 @@ func (ast ASTDataTypeMethodSpec) Equals(to AST) bool {
 
 // type ASTBlock describes a block and the statements in it.
 type ASTBlock struct {
-	pos     SrcSpan // the entire span of the block
+	pos        SrcSpan // the entire span of the block
 	statements []AST   // the statements in the block
 }
 

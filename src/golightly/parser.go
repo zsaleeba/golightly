@@ -6,20 +6,20 @@ import (
 
 // type Parser controls parsing of a token stream into an AST.
 type Parser struct {
-	lexer *Lexer         // the lexical analyser.
-	ts    *DataTypeStore // the data type store.
-	addSrcFile  chan string  // new files are queued for compilation using this stream.
+	lexer         *Lexer         // the lexical analyser.
+	ts            *DataTypeStore // the data type store.
+	sf            *sourceFile    // handy info about this source file.
 
 	filename    string // the name of the file being parsed.
 	packageName string // the name of the package this file is a part of.
 }
 
 // NewParser creates a new parser object.
-func NewParser(lexer *Lexer, ts *DataTypeStore, addSrcFile chan string) *Parser {
+func NewParser(lexer *Lexer, ts *DataTypeStore, sf *sourceFile) *Parser {
 	p := new(Parser)
 	p.lexer = lexer
 	p.ts = ts
-	p.addSrcFile = addSrcFile
+	p.sf = sf
 
 	return p
 }
@@ -191,7 +191,7 @@ func (p *Parser) parseImportSpec() (AST, error) {
 		}
 
 		// tell the compiler to read the imported file
-		p.addSrcFile <- pathToken.(StringToken).strVal
+		p.sf.addImport <- importMessage{pathToken.(StringToken).strVal, p.filename, pathToken.Pos(), nil} // XXX - need to give a completion channel.
 
 		// return the import spec
 		return ASTImport{pathToken.Pos(), ASTIdentifier{nextToken.Pos(), "", strPackageName.strVal}, NewASTValueFromToken(pathToken, p.ts)}, nil
@@ -201,7 +201,7 @@ func (p *Parser) parseImportSpec() (AST, error) {
 		p.lexer.GetToken()
 
 		// tell the compiler to read the imported file
-		p.addSrcFile <- nextToken.(StringToken).strVal
+		p.sf.addImport <- importMessage{nextToken.(StringToken).strVal, p.filename, nextToken.Pos(), nil} // XXX - need to give a completion channel.
 
 		// return the import spec
 		return ASTImport{nextToken.Pos(), nil, NewASTValueFromToken(nextToken, p.ts)}, nil
