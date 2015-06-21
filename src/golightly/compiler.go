@@ -106,9 +106,13 @@ const (
 // Code generation transforms the IR into target executable code
 // plus debug and link information.
 //
-// LINK
+// LINKING
 //
-//
+// The linker is an incremental design. It keeps track of the code
+// in the final executable using a separate database file. When a
+// symbol/function is modified it's replaced in the executable
+// without having to rewrite the whole file. Only the modified
+// portion is rewritten along with linkages to it.
 //
 type Compiler struct {
 	srcFiles map[string]*sourceFile    // the files we're compiling.
