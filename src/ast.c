@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -154,4 +155,69 @@ GoAst *GoAstSetType(GoAst *node, GoAstType typ)
 {
 	node->nodeType = typ;
 	return node;
+}
+
+
+void GoAstPrint(GoAst *node, int indent)
+{
+	int i;
+	
+	for (i = 0; i < indent; i++)
+	    putchar(' ');
+	
+	switch (node->nodeType)
+	{
+	case GoAstTypeIntLiteral:
+		printf("int: %d\n", ((GoAstIntLiteral *)node)->val);
+		break;
+		
+	case GoAstTypeFloatLiteral:
+		printf("float: %f\n", ((GoAstFloatLiteral *)node)->val);
+		break;
+		
+	case GoAstTypeStringLiteral:
+		printf("string: \"%s\"\n", ((GoAstStringLiteral *)node)->val);
+		break;
+		
+	case GoAstTypeCall:
+		{
+			GoAstCall *call = (GoAstCall *)node;
+			printf("call '%s'\n", call->ident);
+			for (i = 0; i < call->params.used; i++)
+			{
+				GoAstPrint(call->params.asts[i], indent+1);
+			}
+			break;
+		}
+	case GoAstTypeBlock:
+		{
+			GoAstList *list = (GoAstList *)node;
+			printf("block\n");
+			for (i = 0; i < list->vec.used; i++)
+			{
+				GoAstPrint(list->vec.asts[i], indent+1);
+			}
+			break;
+		}
+	case GoAstTypeParamList:
+		{
+			GoAstList *list = (GoAstList *)node;
+			printf("params\n");
+			for (i = 0; i < list->vec.used; i++)
+			{
+				GoAstPrint(list->vec.asts[i], indent+1);
+			}
+			break;
+		}
+	case GoAstTypeList:
+		{
+			GoAstList *list = (GoAstList *)node;
+			printf("list\n");
+			for (i = 0; i < list->vec.used; i++)
+			{
+				GoAstPrint(list->vec.asts[i], indent+1);
+			}
+			break;
+		}
+	}
 }

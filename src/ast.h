@@ -68,5 +68,6 @@ GoAstIntLiteral    *GoAstIntLiteralCreate(int val);
 GoAstFloatLiteral  *GoAstFloatLiteralCreate(double val);
 GoAstStringLiteral *GoAstStringLiteralCreate(const char *val);
 GoAst              *GoAstSetType(GoAst *node, GoAstType typ);
+void                GoAstPrint(GoAst *node, int indent);
 
 #endif 

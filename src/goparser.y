@@ -51,10 +51,10 @@
 
 %%
 
-program : stmts
+program : stmts                   { $$ = $1; GoAstPrint((GoAst *)$1, 0) }
         ;
         
-stmts : stmt                      { $$ = GoAstListCreate(GoAstTypeBlock) }
+stmts : stmt                      { $$ = GoAstListCreate(GoAstTypeBlock); GoAstListAppend($$, $1) }
       | stmts stmt                { $$ = GoAstListAppend($1, $2) }
       ;
 
@@ -66,7 +66,7 @@ func_call : ident TLEFTBRACKET call_args TRIGHTBRACKET
           ;
     
 call_args : /*blank*/             { $$ = GoAstListCreate(GoAstTypeParamList) }
-          | expr                  { $$ = GoAstListCreate(GoAstTypeParamList) }
+          | expr                  { $$ = GoAstListCreate(GoAstTypeParamList); GoAstListAppend($$, $1) }
           | call_args TCOMMA expr { $$ = GoAstListAppend($1, $3) }
           ;
 
