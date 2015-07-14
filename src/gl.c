@@ -1,9 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <libgen.h>
 #include <jit/jit.h>
 #include <jit/jit-dump.h>
 
+#include "gl.h"
 
-extern int yyparse();
+/* Global. */
+int compile = FALSE;
+	
 
 #if 0
 // Returns an uncompiled jit_function_t
@@ -27,10 +33,19 @@ jit_function_t build_hello_world(jit_context_t context)
 }
 #endif
 
-
-int main()
+void GoRunProgram(GoAst *ast)
 {
-    printf("gl\n");
+	if (compile)
+		GoAstPrint(ast, 0);
+}
+
+
+int main(int argc, char **argv)
+{
+	if (argc >= 1 && strcmp(basename(argv[0]), "glc") == 0)
+		compile = TRUE;
+		
+	printf("%s - golightly\n", basename(argv[0]));
 	
 	yyparse();
 

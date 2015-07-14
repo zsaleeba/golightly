@@ -1,6 +1,7 @@
 %{
 	#include <stdio.h>
 	#include "ast.h"
+	#include "gl.h"
 	#include "goparser.tab.h"
 	
     extern int yylex();
@@ -51,7 +52,7 @@
 
 %%
 
-program : stmts                   { $$ = $1; GoAstPrint((GoAst *)$1, 0) }
+program : stmts                   { $$ = $1; GoRunProgram((GoAst *)$1) }
         ;
         
 stmts : stmt                      { $$ = GoAstListCreate(GoAstTypeBlock); GoAstListAppend($$, $1) }
