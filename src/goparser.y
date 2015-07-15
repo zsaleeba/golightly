@@ -40,7 +40,7 @@
    calling an (NIdentifier*). It makes the compiler happy.
  */
 %type <ast>     stmt numeric string expr
-%type <astList> program stmts call_args
+%type <astList> program top_level call_args
 %type <call>    func_call
 %type <ident>   ident
 
@@ -52,12 +52,19 @@
 
 %%
 
-program : stmts                   { $$ = $1; GoRunProgram((GoAst *)$1) }
+program : 
+        | top_level               { $$ = $1; GoRunProgram((GoAst *)$1) }
         ;
-        
+		
+top_level : stmt                  { $$ = GoAstListCreate(GoAstTypeBlock); GoAstListAppend($$, $1); GoRunStatement((GoAst *)$1) }
+      | top_level stmt            { $$ = GoAstListAppend($1, $2); GoRunStatement((GoAst *)$2) }
+      ;
+
+/*        
 stmts : stmt                      { $$ = GoAstListCreate(GoAstTypeBlock); GoAstListAppend($$, $1) }
       | stmts stmt                { $$ = GoAstListAppend($1, $2) }
       ;
+*/
 
 stmt : func_call                  { $$ = (GoAst *)$1 }
      ;

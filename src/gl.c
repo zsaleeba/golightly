@@ -2,13 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
-#include <jit/jit.h>
-#include <jit/jit-dump.h>
 
 #include "gl.h"
+#include "codegen_jit.h"
 
-/* Global. */
+
+/* Globals. */
 int compile = FALSE;
+GoCodegenJit genJit;
 	
 
 #if 0
@@ -39,6 +40,19 @@ void GoRunProgram(GoAst *ast)
 		GoAstPrint(ast, 0);
 }
 
+void GoRunStatement(GoAst *ast)
+{
+	// We only run statements individually if we're in interpreter mode.
+	if (compile)
+		return;
+	
+	// Show the Ast.
+	GoAstPrint(ast, 0);
+	
+	// JIT it.
+	GoCodegenJitExecute(&genJit, ast);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -47,7 +61,13 @@ int main(int argc, char **argv)
 		
 	printf("%s - golightly\n", basename(argv[0]));
 	
+	if (!compile)
+		GoCodegenJitInit(&genJit); 
+	
 	yyparse();
+	
+	if (!compile)
+		GoCodegenJitClose(&genJit);
 
 #if 0
 	jit_context_t context = jit_context_create();

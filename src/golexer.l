@@ -26,7 +26,7 @@ int colnum = 1;
 [a-zA-Z_][a-zA-Z0-9_]*  yylval.ident = strdup(yytext); return TIDENTIFIER;
 [0-9]+\.[0-9]*          yylval.floatLit = strtod(yytext, NULL); return TDOUBLE;
 [0-9]+                  yylval.intLit = atoi(yytext); return TINTEGER;
-"\"[^\"]*\""            yylval.stringLit = strdup(yytext); return TSTRING;
+\"(\\.|[^"])*\"         yylval.stringLit = strdup(yytext+1); yylval.stringLit[strlen(yylval.stringLit)-1] = 0; return TSTRING;
 "("                     return TOKEN(TLEFTBRACKET);
 ")"                     return TOKEN(TRIGHTBRACKET);
 "."                     return TOKEN(TDOT);
